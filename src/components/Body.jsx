@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 
 import { LazyLoadImage } from 'react-lazy-load-image-component';
+import ProductCard from "./ProductCard.jsx";
 
 // Width when drawer is expanded
 const drawerWidth = 240;
@@ -99,28 +100,16 @@ function Body({ drawerOpen, toggleDrawer, selectedCategory, setSelectedCategory 
             >
                 <Grid container spacing={3}>
                     {/* Render product cards */}
+                    
                     {products.map((product) => (
                         <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
                             <Card>
-                                <LazyLoadImage
-                                    alt={product.name}
-                                    src={product.imageUrl}
-                                    effect="blur"
-                                    width="100%"
-                                    height="140px"
-                                    style={{ objectFit: 'cover' }}
-                                />
 
-                                <CardContent>
-                                    <Typography variant="h6">{product.name}</Typography>
-                                    <Typography variant="body2">{product.description}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Category: {product.category}
-                                    </Typography>
-                                </CardContent>
+                                <ProductCard product={product} />
                             </Card>
                         </Grid>
                     ))}
+
                 </Grid>
             </Box>
         </Box>
