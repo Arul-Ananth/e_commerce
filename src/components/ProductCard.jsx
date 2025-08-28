@@ -12,7 +12,7 @@ function ProductCard({ product }) {
                 <Card>
                     <LazyLoadImage
                         alt={product.name}
-                        src={product.imageUrl}
+                        src={product.images[0]}
                         effect="blur"
                         width="100%"
                         height="140px"

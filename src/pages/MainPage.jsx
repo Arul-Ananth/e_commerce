@@ -13,7 +13,7 @@ function MainPage() {
 
     return (
         <>
-            <Header toggleDrawer={toggleDrawer} />
+            <Header toggleDrawer={toggleDrawer}/>
             <Body
                 drawerOpen={drawerOpen}
                 toggleDrawer={toggleDrawer}
