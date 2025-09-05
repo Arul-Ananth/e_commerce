@@ -7,7 +7,7 @@ import { fetchCategories, fetchProducts } from '../api/ApiService';
 
 const drawerWidth = 240;
 
-function Body({ drawerOpen }) {
+function Body({ drawerOpen, toggleDrawer }) {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [products, setProducts] = useState([]);
@@ -24,6 +24,7 @@ function Body({ drawerOpen }) {
         <Box sx={{ display: 'flex' }}>
             <Sidebar
                 drawerOpen={drawerOpen}
+                toggleDrawer={toggleDrawer}   // pass toggler down
                 categories={categories}
                 selectedCategory={selectedCategory}
                 setSelectedCategory={setSelectedCategory}

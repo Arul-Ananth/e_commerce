@@ -1,11 +1,12 @@
 import React from "react";
 import { AppBar, Toolbar, Typography, Button, IconButton, Badge, Box } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import MenuIcon from "@mui/icons-material/Menu";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../global_component/CartContext";
 import { useAuth } from "../global_component/AuthContext";
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const navigate = useNavigate();
   const { cartCount } = useCart();
   const { isAuthenticated, logout } = useAuth();
@@ -22,6 +23,10 @@ export default function Header() {
   return (
     <AppBar position="static">
       <Toolbar>
+        <IconButton color="inherit" edge="start" sx={{ mr: 1 }} onClick={onMenuClick}>
+          <MenuIcon />
+        </IconButton>
+
         <Typography
           variant="h6"
           sx={{ flexGrow: 1, cursor: "pointer" }}

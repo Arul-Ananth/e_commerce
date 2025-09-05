@@ -1,13 +1,8 @@
 import React from "react";
 import Body from "../components/Body.jsx";
 
-function MainPage() {
-    const [drawerOpen, setDrawerOpen] = React.useState(false);
+function MainPage({ drawerOpen, toggleDrawer }) {
     const [selectedCategory, setSelectedCategory] = React.useState("All");
-
-    const toggleDrawer = () => {
-        setDrawerOpen(prev => !prev);
-    };
 
     return (
         <Body

@@ -21,13 +21,16 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const toggleDrawer = () => setDrawerOpen((p) => !p);
+
   return (
     <AuthProvider>
       <CartProvider>
         <Router>
-          <Header />
+          <Header onMenuClick={toggleDrawer} />
           <Routes>
-            <Route path="/" element={<MainPage />} />
+            <Route path="/" element={<MainPage drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />} />
             <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
