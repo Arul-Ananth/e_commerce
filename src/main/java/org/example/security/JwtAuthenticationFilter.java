@@ -40,19 +40,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Jws<Claims> jws = jwtService.parseToken(token);
                 String userId = jws.getBody().getSubject();
+
+                // Add this log
+                System.out.println("DEBUG: Token valid. User ID: " + userId);
+
                 userRepository.findById(Long.parseLong(userId)).ifPresent(user -> {
 
-                    // CHANGE: pass user.getAuthorities() instead of emptyList()
+                    // Add this log
+                    System.out.println("DEBUG: User found: " + user.getEmail());
+                    System.out.println("DEBUG: Roles loaded: " + user.getAuthorities());
+
                     var authentication = new UsernamePasswordAuthenticationToken(
                             user,
                             null,
-                            user.getAuthorities()); // This loads the roles (ROLE_ADMIN, etc.)
+                            user.getAuthorities());
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 });
-            } catch (Exception ignored) {
-                // Invalid/expired token -> proceed without auth; security will block protected paths
+            } catch (Exception e) {
+                // CHANGE THIS: Print the error!
+                System.out.println("DEBUG: Authentication Failed: " + e.getMessage());
+                e.printStackTrace();
             }
         }
         filterChain.doFilter(request, response);
