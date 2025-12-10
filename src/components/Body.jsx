@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Toolbar } from '@mui/material'; // 👈 Import Toolbar
 import Sidebar from './Sidebar';
-import Header from './Header';
+
 import ProductGrid from './ProductGrid';
 import { fetchCategories, fetchProducts } from '../api/ApiService';
 

@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
 import {
-    Box,
-    TextField,
-    Button,
-    Typography,
-    Paper,
-    Grid,
-    MenuItem,
-    Alert,
-    Stack
+    Box, TextField, Button, Typography, Paper, Grid, MenuItem, Alert, Stack
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { addProduct } from '../../api/ApiService'; // Import from your updated Service
+import { addProduct } from '../../api/ApiService';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES = ["Electronics", "Fashion", "Home", "Beauty", "Books", "Toys"];
@@ -23,11 +15,7 @@ function AddProduct() {
     const [success, setSuccess] = useState(false);
 
     const [formData, setFormData] = useState({
-        name: "",
-        description: "",
-        price: "",
-        category: "",
-        imageUrl: ""
+        name: "", description: "", price: "", category: "", imageUrl: ""
     });
 
     const handleChange = (e) => {
@@ -42,27 +30,21 @@ function AddProduct() {
         setSuccess(false);
 
         try {
-            // 1. Prepare data for Backend
-            // backend expects 'images' as a List<String>, but form has single 'imageUrl'
             const payload = {
                 name: formData.name,
                 description: formData.description,
                 category: formData.category,
                 price: parseFloat(formData.price),
-                images: [formData.imageUrl] // Wrap single URL in an array
+                images: [formData.imageUrl]
             };
 
-            // 2. Call the API
             await addProduct(payload);
-
             setSuccess(true);
-
-            // Optional: Reset form or redirect
             setTimeout(() => navigate('/'), 2000);
 
         } catch (err) {
             console.error(err);
-            setError("Failed to add product. Ensure you are an Admin.");
+            setError("Failed to add product.");
         } finally {
             setLoading(false);
         }
@@ -79,97 +61,53 @@ function AddProduct() {
                 {success && <Alert severity="success" sx={{ mb: 3 }}>Product added successfully!</Alert>}
 
                 <form onSubmit={handleSubmit}>
+                    {/* FIXED: Use v7 Grid syntax (container + size) */}
                     <Grid container spacing={3}>
-
-                        {/* Product Name */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                                fullWidth
-                                label="Product Name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                required
+                                fullWidth label="Product Name" name="name"
+                                value={formData.name} onChange={handleChange} required
                             />
                         </Grid>
 
-                        {/* Category Select */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                                fullWidth
-                                select
-                                label="Category"
-                                name="category"
-                                value={formData.category}
-                                onChange={handleChange}
-                                required
+                                fullWidth select label="Category" name="category"
+                                value={formData.category} onChange={handleChange} required
                             >
                                 {CATEGORIES.map((option) => (
-                                    <MenuItem key={option} value={option}>
-                                        {option}
-                                    </MenuItem>
+                                    <MenuItem key={option} value={option}>{option}</MenuItem>
                                 ))}
                             </TextField>
                         </Grid>
 
-                        {/* Price */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                                fullWidth
-                                label="Price (₹)"
-                                name="price"
-                                type="number"
-                                value={formData.price}
-                                onChange={handleChange}
-                                required
-                                inputProps={{ min: "0", step: "0.01" }}
+                                fullWidth label="Price (₹)" name="price" type="number"
+                                value={formData.price} onChange={handleChange} required
                             />
                         </Grid>
 
-                        {/* Image URL */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                                fullWidth
-                                label="Image URL"
-                                name="imageUrl"
-                                value={formData.imageUrl}
-                                onChange={handleChange}
-                                helperText="e.g., http://localhost:8080/images/prod1.jpg"
-                                required
+                                fullWidth label="Image URL" name="imageUrl"
+                                value={formData.imageUrl} onChange={handleChange} required
                             />
                         </Grid>
 
-                        {/* Description */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
-                                fullWidth
-                                multiline
-                                rows={4}
-                                label="Description"
-                                name="description"
-                                value={formData.description}
-                                onChange={handleChange}
-                                required
+                                fullWidth multiline rows={4} label="Description" name="description"
+                                value={formData.description} onChange={handleChange} required
                             />
                         </Grid>
 
-                        {/* Action Buttons */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => navigate('/')}
-                                    disabled={loading}
-                                >
+                                <Button variant="outlined" onClick={() => navigate('/')} disabled={loading}>
                                     Cancel
                                 </Button>
-                                <Button
-                                    type="submit"
-                                    variant="contained"
-                                    size="large"
-                                    startIcon={<CloudUploadIcon />}
-                                    disabled={loading}
-                                >
+                                <Button type="submit" variant="contained" size="large" startIcon={<CloudUploadIcon />} disabled={loading}>
                                     {loading ? "Publishing..." : "Publish Product"}
                                 </Button>
                             </Stack>

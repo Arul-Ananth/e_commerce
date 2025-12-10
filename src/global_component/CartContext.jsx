@@ -9,7 +9,6 @@ export function CartProvider({ children }) {
     const [cartItems, setCartItems] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    // 1. Fixed: Added try/catch to prevent 403 errors from crashing the app
     const loadCart = useCallback(async () => {
         if (!isAuthenticated) {
             setCartItems([]);
@@ -21,19 +20,17 @@ export function CartProvider({ children }) {
             setCartItems(items);
         } catch (err) {
             console.error("Failed to load cart:", err);
-            // Optional: If error is 403, the AuthContext will likely handle logout or token refresh eventually.
-            // We catch it here to keep the UI stable.
         } finally {
             setLoading(false);
         }
     }, [isAuthenticated]);
 
+    // FIXED: Handle Promise returned from loadUsers/loadCart
     useEffect(() => {
-        loadCart();
+        loadCart().catch(e => console.error("Cart init error:", e));
     }, [loadCart]);
 
     const addToCart = useCallback(async (product, qty = 1) => {
-        // Optimistic UI Update
         setCartItems((prev) => {
             const idx = prev.findIndex((p) => p.id === product.id);
             if (idx === -1) {
@@ -46,23 +43,20 @@ export function CartProvider({ children }) {
         });
 
         try {
-            // 2. Fixed: Send only 'qty' (delta), not the total.
-            // Your backend 'addOrIncrement' adds this value to the existing stock.
             await ApiService.addOrUpdateCartItem(product.id, qty);
         } catch (e) {
-            console.error("Add to cart failed, rolling back", e);
-            await loadCart(); // Rollback to server state
+            console.error("Add to cart failed", e);
+            await loadCart();
             throw e;
         }
     }, [loadCart]);
 
     const updateQuantity = useCallback(async (productId, quantity) => {
-        // Optimistic Update
         setCartItems((prev) => prev.map((p) => (p.id === productId ? { ...p, quantity } : p)));
         try {
-            // This endpoint sets the ABSOLUTE quantity (PATCH), so passing 'quantity' is correct.
             await ApiService.updateCartItem(productId, quantity);
         } catch (e) {
+            console.error("Update quantity failed", e);
             await loadCart();
             throw e;
         }
@@ -74,6 +68,7 @@ export function CartProvider({ children }) {
         try {
             await ApiService.removeCartItem(productId);
         } catch (e) {
+            console.error("Remove item failed", e);
             setCartItems(prevSnapshot);
             throw e;
         }
@@ -85,6 +80,7 @@ export function CartProvider({ children }) {
         try {
             await ApiService.clearCart();
         } catch (e) {
+            console.error("Clear cart failed", e);
             setCartItems(prevSnapshot);
             throw e;
         }

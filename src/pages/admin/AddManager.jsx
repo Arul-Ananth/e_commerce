@@ -12,7 +12,8 @@ export default function AddManager() {
             await registerManager(formData);
             setMsg({ type: 'success', text: 'Manager account created successfully!' });
             setFormData({ email: '', password: '', username: '' });
-        } catch (err) {
+        } catch {
+            // FIXED: Removed unused 'err'
             setMsg({ type: 'error', text: 'Failed to create manager.' });
         }
     };

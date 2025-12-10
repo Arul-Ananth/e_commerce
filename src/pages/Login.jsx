@@ -42,9 +42,8 @@ export default function Login() {
             console.log("API Response:", response);
 
             // 2. Validate Response
-            if (!response.token || !response.user) {
-                throw new Error("Invalid server response: Missing token or user data.");
-            }
+            if (!response.token || !response.user) throw new Error("Invalid server response: Missing token or user data.");
+
 
             // 3. Update Auth Context
             // The backend returns { token: "...", user: {...} }
