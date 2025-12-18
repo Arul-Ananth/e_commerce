@@ -48,8 +48,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/users/**").hasAnyRole("ADMIN", "MANAGER")
 
                         // Cart/Reviews (Authenticated Users)
+                        .requestMatchers("/api/v1/reviews/**").authenticated()
+                        .requestMatchers("/api/v1/checkout/**").authenticated()
                         .requestMatchers("/api/v1/cart/**").authenticated()
                         .anyRequest().authenticated()
+
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

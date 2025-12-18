@@ -1,21 +1,43 @@
 package org.example.controller;
 
+import org.example.model.User;
+import org.example.service.CartService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
 
 @RestController
+
+@RequestMapping("/api/v1/checkout")
 @CrossOrigin(origins = {"http://localhost:5173", "http://192.168.1.4:5173"})
 public class CheckoutController {
 
-    @PostMapping("/product/checkout")
-    public ResponseEntity<Map<String, Object>> startCheckout() {
-        // Placeholder response – integrate payment provider as needed
+    private final CartService cartService;
+
+    // Inject CartService so we can empty the cart after purchase
+    public CheckoutController(CartService cartService) {
+        this.cartService = cartService;
+    }
+
+    @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> checkout(@AuthenticationPrincipal User user) {
+
+        // Perform Purchase Logic (Payment Gateway would go here)
+        String orderId = UUID.randomUUID().toString();
+
+        //  Clear the User's Cart
+        cartService.clear(user);
+
+        // Return Success Response
         return ResponseEntity.ok(Map.of(
-                "orderId", UUID.randomUUID().toString(),
-                "status", "CREATED"
+                "orderId", orderId,
+                "status", "SUCCESS",
+                "message", "Order placed successfully!"
         ));
     }
 }

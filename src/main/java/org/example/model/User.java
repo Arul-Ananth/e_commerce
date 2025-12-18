@@ -72,4 +72,7 @@ public class User implements UserDetails {
     public void setRealUsername(String username) { this.username = username; }
     public void setFlagged(boolean flagged) { isFlagged = flagged; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public boolean isFlagged() {        return isFlagged;    }
+
+
 }
