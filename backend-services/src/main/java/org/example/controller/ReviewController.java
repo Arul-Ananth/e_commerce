@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products/{productId}/reviews")
-@CrossOrigin(origins = {"http://localhost:5173", "http://192.168.1.4:5173"})
+
 public class ReviewController {
 
     private final ReviewService reviewService;
@@ -21,12 +21,12 @@ public class ReviewController {
     }
 
     @GetMapping
-    public List<Review> getReviews(@PathVariable Long productId) {
+    public List<Review> getReviews(@PathVariable("productId") Long productId) {
         return reviewService.getReviewsByProductId(productId);
     }
 
     @PostMapping
-    public ResponseEntity<Review> addReview(@PathVariable Long productId,
+    public ResponseEntity<Review> addReview(@PathVariable("productId") Long productId,
                                             @RequestBody Review review,
                                             @AuthenticationPrincipal User user) {
         // Use the real username from the logged-in user

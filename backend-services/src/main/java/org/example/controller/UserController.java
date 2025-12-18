@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
-@CrossOrigin(origins = {"http://localhost:5173", "http://192.168.1.4:5173"})
+
 public class UserController {
 
     private final UserRepository userRepository;
@@ -37,7 +37,7 @@ public class UserController {
     // Flag a user (Manager Only)
     @PatchMapping("/{id}/flag")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<User> flagUser(@PathVariable Long id) {
+    public ResponseEntity<User> flagUser(@PathVariable("id") Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
@@ -48,7 +48,7 @@ public class UserController {
     // Unflag a user (Admin Only - after review)
     @PatchMapping("/{id}/unflag")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> unflagUser(@PathVariable Long id) {
+    public ResponseEntity<User> unflagUser(@PathVariable("id") Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
@@ -59,7 +59,7 @@ public class UserController {
     // Delete a user (Admin Only)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable("id") Long id) {
         if (!userRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }

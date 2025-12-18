@@ -13,7 +13,7 @@ import java.util.UUID;
 @RestController
 
 @RequestMapping("/api/v1/checkout")
-@CrossOrigin(origins = {"http://localhost:5173", "http://192.168.1.4:5173"})
+
 public class CheckoutController {
 
     private final CartService cartService;

@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/images")
-@CrossOrigin(origins = {"http://localhost:5173", "http://192.168.1.4:5173"})
+
 public class ImageUploadController {
 
     // Matches the path in your StaticResourceConfig

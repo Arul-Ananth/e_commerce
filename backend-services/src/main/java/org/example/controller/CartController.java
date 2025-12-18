@@ -38,7 +38,7 @@ public class CartController {
     // PATCH /api/v1/cart/items/{productId}
     @PatchMapping("/items/{productId}")
     public ResponseEntity<CartResponse> updateQuantity(@AuthenticationPrincipal User user,
-                                                       @PathVariable Long productId,
+                                                       @PathVariable("productId") Long productId, // FIX: Added ("productId")
                                                        @RequestBody Map<String, Object> body) {
         int quantity = ((Number) body.get("quantity")).intValue();
         return ResponseEntity.ok(cart.setQuantity(user, productId, quantity));
@@ -47,7 +47,7 @@ public class CartController {
     // DELETE /api/v1/cart/items/{productId}
     @DeleteMapping("/items/{productId}")
     public ResponseEntity<CartResponse> removeItem(@AuthenticationPrincipal User user,
-                                                   @PathVariable Long productId) {
+                                                   @PathVariable("productId") Long productId) { // FIX: Added ("productId")
         return ResponseEntity.ok(cart.removeItem(user, productId));
     }
 

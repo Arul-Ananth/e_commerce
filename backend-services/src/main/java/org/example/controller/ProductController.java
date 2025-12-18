@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
-@CrossOrigin(origins = {"http://localhost:5173", "http://192.168.1.4:5173"})
+
 public class ProductController {
 
     private final ProductService service;
@@ -26,7 +26,7 @@ public class ProductController {
 
     // GET /api/v1/products/{id}
     @GetMapping("/products/{id}")
-    public ResponseEntity<Product> getProduct(@PathVariable Long id) {
+    public ResponseEntity<Product> getProduct(@PathVariable("id") Long id) {
         return ResponseEntity.ok(service.getProductById(id));
     }
 
@@ -39,7 +39,7 @@ public class ProductController {
     // GET /api/v1/products?category=Electronics (Optional filter style)
     // or GET /api/v1/products/category/{name}
     @GetMapping("/products/category/{categoryName}")
-    public List<Product> getByCategory(@PathVariable String categoryName) {
+    public List<Product> getByCategory(@PathVariable("categoryName") String categoryName) {
         return service.getProductsByCategory(categoryName);
     }
 
@@ -51,12 +51,12 @@ public class ProductController {
     }
 
     @PutMapping("/products/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
+    public ResponseEntity<Product> updateProduct(@PathVariable("id") Long id, @RequestBody Product product) {
         return ResponseEntity.ok(service.updateProduct(id, product));
     }
 
     @DeleteMapping("/products/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteProduct(@PathVariable("id") Long id) {
         service.deleteProduct(id);
         return ResponseEntity.noContent().build();
     }
