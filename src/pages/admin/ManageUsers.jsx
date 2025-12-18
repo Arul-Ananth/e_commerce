@@ -20,27 +20,52 @@ export default function ManageUsers() {
     const isManager = currentUser?.roles?.includes('ROLE_MANAGER');
 
     useEffect(() => {
-        // FIXED: Handle promise rejection
-        const init = async () => {
-            setLoading(true);
-            try {
-                const data = await getAllUsers();
-                setUsers(Array.isArray(data) ? data : []);
-                setError(null);
-            } catch (err) {
-                console.error("Failed to load users", err);
-                setError("Failed to fetch user list.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        init();
+        loadUsers();
     }, []);
 
+    const loadUsers = async () => {
+        setLoading(true);
+        try {
+            const data = await getAllUsers();
+            const safeData = Array.isArray(data) ? data : [];
+
+            // --- SORTING LOGIC ---
+            // Flagged users (true) come before Active users (false)
+            safeData.sort((a, b) => {
+                // Check both property names in case JSON format varies
+                const aFlagged = a.isFlagged || a.flagged || false;
+                const bFlagged = b.isFlagged || b.flagged || false;
+
+                // If 'a' is flagged and 'b' is not, 'a' moves up (-1)
+                // If 'b' is flagged and 'a' is not, 'b' moves up (1)
+                // If both are same, don't move (0)
+                return (aFlagged === bFlagged) ? 0 : aFlagged ? -1 : 1;
+            });
+
+            setUsers(safeData);
+            setError(null);
+        } catch (err) {
+            console.error("Failed to load users", err);
+            setError("Failed to fetch user list.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Helper to refresh list silently (without full loading spinner)
     const refreshList = async () => {
         try {
             const data = await getAllUsers();
-            setUsers(Array.isArray(data) ? data : []);
+            const safeData = Array.isArray(data) ? data : [];
+
+            // Apply the same sort on refresh
+            safeData.sort((a, b) => {
+                const aFlagged = a.isFlagged || a.flagged || false;
+                const bFlagged = b.isFlagged || b.flagged || false;
+                return (aFlagged === bFlagged) ? 0 : aFlagged ? -1 : 1;
+            });
+
+            setUsers(safeData);
         } catch (error) {
             console.error("Silent refresh failed", error);
         }
@@ -51,8 +76,7 @@ export default function ManageUsers() {
         try {
             await deleteUser(id);
             await refreshList();
-        } catch {
-            // FIXED: Removed unused 'err'
+        } catch (err) {
             alert("Failed to delete user.");
         }
     };
@@ -61,7 +85,7 @@ export default function ManageUsers() {
         try {
             await flagUser(id);
             await refreshList();
-        } catch {
+        } catch (err) {
             alert("Failed to flag user.");
         }
     };
@@ -70,7 +94,7 @@ export default function ManageUsers() {
         try {
             await unflagUser(id);
             await refreshList();
-        } catch {
+        } catch (err) {
             alert("Failed to unflag user.");
         }
     };
@@ -94,61 +118,68 @@ export default function ManageUsers() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {users.map((u) => (
-                            <TableRow key={u.id} sx={{ backgroundColor: (u.isFlagged || u.flagged) ? '#fff4f4' : 'inherit' }}>
-                                <TableCell>{u.id}</TableCell>
-                                <TableCell>{u.email}</TableCell>
-                                <TableCell>{u.realUsername || u.username || 'N/A'}</TableCell>
-                                <TableCell>
-                                    {(u.isFlagged || u.flagged) ? (
-                                        <Chip icon={<FlagIcon />} label="Flagged" color="error" size="small" />
-                                    ) : (
-                                        <Chip label="Active" color="success" size="small" />
-                                    )}
-                                </TableCell>
-                                <TableCell>
-                                    {Array.isArray(u.roles)
-                                        ? u.roles.map(r => (typeof r === 'string' ? r : r.name)).join(", ")
-                                        : "No Role"}
-                                </TableCell>
-                                <TableCell>
-                                    {isManager && !(u.isFlagged || u.flagged) && (
-                                        <Button
-                                            size="small"
-                                            color="warning"
-                                            startIcon={<FlagIcon />}
-                                            onClick={() => handleFlag(u.id)}
-                                        >
-                                            Flag
-                                        </Button>
-                                    )}
+                        {users.map((u) => {
+                            // Determine flag status for rendering
+                            const isUserFlagged = u.isFlagged || u.flagged;
 
-                                    {isAdmin && (
-                                        <>
-                                            {(u.isFlagged || u.flagged) && (
-                                                <Button
-                                                    size="small"
-                                                    color="success"
-                                                    startIcon={<CheckCircleIcon />}
-                                                    onClick={() => handleUnflag(u.id)}
-                                                    sx={{ mr: 1 }}
-                                                >
-                                                    Review OK
-                                                </Button>
-                                            )}
+                            return (
+                                <TableRow key={u.id} sx={{ backgroundColor: isUserFlagged ? '#d32f2f' : 'inherit' }}>
+                                    <TableCell>{u.id}</TableCell>
+                                    <TableCell>{u.email}</TableCell>
+                                    <TableCell>{u.realUsername || u.username || 'N/A'}</TableCell>
+                                    <TableCell>
+                                        {isUserFlagged ? (
+                                            <Chip icon={<FlagIcon />} label="Flagged" color="error" size="small" />
+                                        ) : (
+                                            <Chip label="Active" color="success" size="small" />
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {Array.isArray(u.roles)
+                                            ? u.roles.map(r => (typeof r === 'string' ? r : r.name)).join(", ")
+                                            : "No Role"}
+                                    </TableCell>
+                                    <TableCell>
+                                        {/* Managers can Flag active users */}
+                                        {isManager && !isUserFlagged && (
                                             <Button
                                                 size="small"
-                                                color="error"
-                                                startIcon={<DeleteIcon />}
-                                                onClick={() => handleDelete(u.id)}
+                                                color="warning"
+                                                startIcon={<FlagIcon />}
+                                                onClick={() => handleFlag(u.id)}
                                             >
-                                                Delete
+                                                Flag
                                             </Button>
-                                        </>
-                                    )}
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                                        )}
+
+                                        {/* Admins can Unflag and Delete */}
+                                        {isAdmin && (
+                                            <>
+                                                {isUserFlagged && (
+                                                    <Button
+                                                        size="small"
+                                                        color="success"
+                                                        startIcon={<CheckCircleIcon />}
+                                                        onClick={() => handleUnflag(u.id)}
+                                                        sx={{ mr: 1 }}
+                                                    >
+                                                        Review OK
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    size="small"
+                                                    color="error"
+                                                    startIcon={<DeleteIcon />}
+                                                    onClick={() => handleDelete(u.id)}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </TableContainer>

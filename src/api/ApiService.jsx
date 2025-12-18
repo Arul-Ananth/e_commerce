@@ -111,7 +111,7 @@ async function getCart() {
     return data.items ?? [];
 }
 
-async function addOrUpdateCartItem(productId, quantity) {
+export async function addOrUpdateCartItem(productId, quantity) {
     // Endpoint: POST /api/v1/cart/items
     const { data } = await api.post("/cart/items", { productId, quantity });
     return data;
@@ -197,6 +197,23 @@ export async function registerManager(managerData) {
     return data;
 }
 
+// ... existing imports
+
+
+export async function uploadImage(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const { data } = await api.post("/images/upload", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+    return data.url; // Returns the http://localhost:8080/images/xyz.jpg string
+}
+
+
+
 // ---- Export Default ----
 export default {
     api,
@@ -224,5 +241,7 @@ export default {
     flagUser,
     unflagUser,
     deleteUser,
-    registerManager
+    registerManager,
+    uploadImage,
+
 };

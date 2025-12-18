@@ -13,13 +13,19 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions
+    DialogActions,
+    // NEW IMPORTS FOR RADIO BUTTONS
+    Radio,
+    RadioGroup,
+    FormControlLabel,
+    FormControl,
+    FormLabel
 } from "@mui/material";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
-import DeleteIcon from "@mui/icons-material/Delete"; // Import Delete Icon
+import DeleteIcon from "@mui/icons-material/Delete";
 
-import { fetchProduct, fetchReviews, deleteProduct } from "../api/ApiService.jsx"; // Import deleteProduct
+import { fetchProduct, fetchReviews, deleteProduct } from "../api/ApiService.jsx";
 import { useCart } from "../global_component/CartContext";
 import { useAuth } from "../global_component/AuthContext";
 
@@ -31,9 +37,12 @@ function ProductDetails() {
     const [product, setProduct] = useState(null);
     const [reviews, setReviews] = useState([]);
 
+    // NEW: State for selected discount
+    const [selectedDiscount, setSelectedDiscount] = useState(null);
+
     // Auth & Cart
     const { addToCart } = useCart();
-    const { isAuthenticated, user } = useAuth(); // Destructure 'user' to check roles
+    const { isAuthenticated, user } = useAuth();
 
     // Check if Admin
     const isAdmin = user?.roles?.includes('ROLE_ADMIN');
@@ -48,9 +57,24 @@ function ProductDetails() {
 
     if (!product) return <p>Loading product...</p>;
 
+
     const handleAddToCart = async () => {
         try {
             await addToCart(product, 1);
+
+            // --- FRONTEND ONLY FIX: Save Discount to Local Storage ---
+            if (selectedDiscount) {
+                // Get existing discounts map or create new one
+                const savedDiscounts = JSON.parse(localStorage.getItem("cart_discounts") || "{}");
+
+                // Save this discount mapped by Product ID
+                savedDiscounts[product.id] = selectedDiscount;
+
+                // Write back to storage
+                localStorage.setItem("cart_discounts", JSON.stringify(savedDiscounts));
+            }
+            // ---------------------------------------------------------
+
         } catch (e) {
             console.error("Error adding to cart:", e);
         }
@@ -75,7 +99,6 @@ function ProductDetails() {
         try {
             await deleteProduct(id);
             setOpenDelete(false);
-            // Redirect to home after deletion
             navigate("/", { replace: true });
         } catch (err) {
             console.error("Failed to delete product", err);
@@ -87,18 +110,93 @@ function ProductDetails() {
         setOpenDelete(false);
     };
 
+    // NEW: Handle Radio Change
+    const handleDiscountChange = (event) => {
+        const discountId = parseInt(event.target.value);
+        if (isNaN(discountId)) {
+            setSelectedDiscount(null); // Case for "No Discount"
+        } else {
+            const discount = product.discounts.find(d => d.id === discountId);
+            setSelectedDiscount(discount);
+        }
+    };
+
+    // NEW: Calculate Price based on selection
+    const calculatePrice = () => {
+        if (!selectedDiscount) return product.price;
+        const discountAmount = (product.price * selectedDiscount.percentage) / 100;
+        return (product.price - discountAmount).toFixed(2);
+    };
+
     return (
         <Box sx={{ p: 4 }}>
             <Typography variant="h4" gutterBottom>
                 {product.name}
             </Typography>
 
-            <Grid container spacing={2}>
+            {/* --- MODIFIED DISCOUNT SECTION WITH RADIO BUTTONS --- */}
+            {product.discounts && product.discounts.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                    <FormControl component="fieldset" fullWidth>
+                        <FormLabel component="legend" sx={{ mb: 1, color: 'text.secondary' }}>
+                            Select an Offer:
+                        </FormLabel>
+                        <RadioGroup
+                            name="discount-group"
+                            value={selectedDiscount ? selectedDiscount.id : "none"}
+                            onChange={handleDiscountChange}
+                        >
+                            {/* Option 1: No Discount */}
+                            <FormControlLabel
+                                value="none"
+                                control={<Radio color="primary" />}
+                                label="Original Price (No Discount)"
+                                sx={{ mb: 1 }}
+                            />
+
+                            {/* Option 2..N: Dynamic Discounts */}
+                            {product.discounts.map((discount, i) => (
+                                <FormControlLabel
+                                    key={i}
+                                    value={discount.id}
+                                    sx={{ width: '100%', ml: 0, mb: 1, alignItems: 'flex-start' }} // Align nicely
+                                    control={<Radio color="success" sx={{ mt: 1 }} />} // Green radio for visibility
+                                    label={
+                                        // YOUR ORIGINAL STYLE BOX PRESERVED HERE
+                                        <Box sx={{
+                                            p: 1.5,
+                                            width: '100%',
+                                            border: '1px dashed #2e7d32',
+                                            borderRadius: 1,
+                                            bgcolor: 'rgba(46, 125, 50, 0.05)',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            ml: 1 // Add margin left to separate from radio
+                                        }}>
+                                            <Box>
+                                                <Typography variant="body2" fontWeight="bold" color="success.main">
+                                                    {discount.description || "Special Discount"}: {discount.percentage}% Off
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Valid from {discount.startDate} {discount.endDate ? `to ${discount.endDate}` : ""}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    }
+                                />
+                            ))}
+                        </RadioGroup>
+                    </FormControl>
+                </Box>
+            )}
+
+            <Grid container spacing={2} sx={{ mt: 2 }}>
                 {/* Left: Images */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid item xs={12} md={6}>
                     <Grid container spacing={1}>
                         {product.images && product.images.map((img, index) => (
-                            <Grid size={{ xs: 6 }} key={index}>
+                            <Grid item xs={6} key={index}>
                                 <Card sx={{ height: '100%' }}>
                                     <CardMedia
                                         component="img"
@@ -113,16 +211,31 @@ function ProductDetails() {
                 </Grid>
 
                 {/* Right: Info */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid item xs={12} md={6}>
                     <Typography variant="body1" paragraph>
                         {product.description}
                     </Typography>
                     <Typography variant="subtitle1" color="text.secondary">
                         Category: {product.category}
                     </Typography>
-                    <Typography variant="h5" sx={{ mt: 1, mb: 2 }}>
-                        Price: ₹{product.price}
-                    </Typography>
+
+                    {/* MODIFIED PRICE DISPLAY */}
+                    <Box sx={{ mt: 1, mb: 2 }}>
+                        {selectedDiscount ? (
+                            <Box>
+                                <Typography variant="h6" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
+                                    ₹{product.price}
+                                </Typography>
+                                <Typography variant="h4" color="success.main" fontWeight="bold">
+                                    ₹{calculatePrice()}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Typography variant="h5">
+                                Price: ₹{product.price}
+                            </Typography>
+                        )}
+                    </Box>
 
                     <Stack spacing={2} sx={{ mt: 2, maxWidth: 400 }}>
                         {/* User Buttons */}
