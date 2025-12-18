@@ -1,0 +1,24 @@
+# Specific Files to Ignore
+improvements.txt
+schema.txt
+
+# Infrastructure and Assets
+nginx/
+imageResource/
+
+# IDE and System files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Frontend (Angular)
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Backend (Spring Boot)
+backend-services/target/
+backend-services/build/
+backend-services/.gradle/
