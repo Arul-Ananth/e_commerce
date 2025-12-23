@@ -1,28 +1,16 @@
-package org.example.dto.auth;
+package org.example.dto.user;
 
 import java.util.List;
 
-public class UserDto {
+public class UserAdminDto {
     private Long id;
     private String email;
-    private String username; // Added
-    private List<String> roles; // Added
+    private String username;
+    private List<String> roles;
+    private boolean flagged;
     private Double userDiscountPercentage;
     private java.time.LocalDate userDiscountStartDate;
     private java.time.LocalDate userDiscountEndDate;
-
-    public UserDto() {}
-
-    public UserDto(Long id, String email, String username, List<String> roles, Double userDiscountPercentage,
-                   java.time.LocalDate userDiscountStartDate, java.time.LocalDate userDiscountEndDate) {
-        this.id = id;
-        this.email = email;
-        this.username = username;
-        this.roles = roles;
-        this.userDiscountPercentage = userDiscountPercentage;
-        this.userDiscountStartDate = userDiscountStartDate;
-        this.userDiscountEndDate = userDiscountEndDate;
-    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -35,6 +23,9 @@ public class UserDto {
 
     public List<String> getRoles() { return roles; }
     public void setRoles(List<String> roles) { this.roles = roles; }
+
+    public boolean isFlagged() { return flagged; }
+    public void setFlagged(boolean flagged) { this.flagged = flagged; }
 
     public Double getUserDiscountPercentage() { return userDiscountPercentage; }
     public void setUserDiscountPercentage(Double userDiscountPercentage) { this.userDiscountPercentage = userDiscountPercentage; }

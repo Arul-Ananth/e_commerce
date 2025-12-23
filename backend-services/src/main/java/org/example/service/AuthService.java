@@ -89,7 +89,15 @@ public class AuthService {
                 .collect(Collectors.toList());
 
         // Assuming your User entity uses getRealUsername() for the display name
-        return new UserDto(user.getId(), user.getEmail(), user.getRealUsername(), roleNames);
+        return new UserDto(
+                user.getId(),
+                user.getEmail(),
+                user.getRealUsername(),
+                roleNames,
+                user.getUserDiscountPercentage(),
+                user.getUserDiscountStartDate(),
+                user.getUserDiscountEndDate()
+        );
     }
 
 

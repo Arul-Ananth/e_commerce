@@ -32,7 +32,11 @@ public class CartController {
                                                     @RequestBody Map<String, Object> body) {
         Long productId = ((Number) body.get("productId")).longValue();
         int quantity = ((Number) body.get("quantity")).intValue();
-        return ResponseEntity.ok(cart.addOrIncrement(user, productId, quantity));
+        Long discountId = null;
+        if (body.containsKey("discountId") && body.get("discountId") != null) {
+            discountId = ((Number) body.get("discountId")).longValue();
+        }
+        return ResponseEntity.ok(cart.addOrIncrement(user, productId, quantity, discountId));
     }
 
     // PATCH /api/v1/cart/items/{productId}
@@ -42,6 +46,18 @@ public class CartController {
                                                        @RequestBody Map<String, Object> body) {
         int quantity = ((Number) body.get("quantity")).intValue();
         return ResponseEntity.ok(cart.setQuantity(user, productId, quantity));
+    }
+
+    // PATCH /api/v1/cart/items/{productId}/discount
+    @PatchMapping("/items/{productId}/discount")
+    public ResponseEntity<CartResponse> updateDiscount(@AuthenticationPrincipal User user,
+                                                       @PathVariable("productId") Long productId,
+                                                       @RequestBody Map<String, Object> body) {
+        Long discountId = null;
+        if (body.containsKey("discountId") && body.get("discountId") != null) {
+            discountId = ((Number) body.get("discountId")).longValue();
+        }
+        return ResponseEntity.ok(cart.updateItemDiscount(user, productId, discountId));
     }
 
     // DELETE /api/v1/cart/items/{productId}

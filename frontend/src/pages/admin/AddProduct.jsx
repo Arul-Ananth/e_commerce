@@ -59,12 +59,25 @@ function AddProduct() {
         setSuccess(false);
 
         try {
+            const hasDiscount =
+                formData.discountPercentage !== "" &&
+                formData.discountStartDate !== "";
+            const discounts = hasDiscount
+                ? [{
+                    description: "Admin Discount",
+                    percentage: parseFloat(formData.discountPercentage),
+                    startDate: formData.discountStartDate,
+                    endDate: formData.discountEndDate || null
+                }]
+                : [];
+
             const payload = {
                 name: formData.name,
                 description: formData.description,
                 category: formData.category,
                 price: parseFloat(formData.price),
-                images: [formData.imageUrl]
+                images: [formData.imageUrl],
+                discounts
             };
 
             await addProduct(payload);

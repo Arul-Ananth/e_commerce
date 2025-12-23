@@ -2,7 +2,10 @@ package org.example.controller;
 
 import org.example.dto.auth.AuthResponse;
 import org.example.dto.auth.SignupRequest;
+import org.example.dto.user.UserAdminDto;
+import org.example.model.Role;
 import org.example.model.User;
+import org.example.repository.RoleRepository;
 import org.example.repository.UserRepository;
 import org.example.service.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -19,10 +23,12 @@ import java.util.List;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final AuthService authService; // Add AuthService
 
-    public UserController(UserRepository userRepository, AuthService authService) {
+    public UserController(UserRepository userRepository, RoleRepository roleRepository, AuthService authService) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.authService = authService;
     }
 
@@ -30,8 +36,11 @@ public class UserController {
     // List all users (For Admin view & Manager to find people to flag)
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserAdminDto> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::toAdminDto)
+                .collect(Collectors.toList());
     }
 
     // Flag a user (Manager Only)
@@ -67,11 +76,89 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    // Update per-user discount percentage (Admin or Manager)
+    @PatchMapping("/{id}/discount")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<User> updateUserDiscount(@PathVariable("id") Long id,
+                                                   @RequestBody java.util.Map<String, Object> body) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        Double percentage = null;
+        if (body.containsKey("percentage") && body.get("percentage") != null) {
+            percentage = ((Number) body.get("percentage")).doubleValue();
+        }
+
+        if (percentage == null || percentage < 0 || percentage > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "percentage must be between 0 and 100");
+        }
+
+        java.time.LocalDate startDate = parseDate(body.get("startDate"));
+        java.time.LocalDate endDate = parseDate(body.get("endDate"));
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "endDate cannot be before startDate");
+        }
+
+        user.setUserDiscountPercentage(percentage);
+        if (percentage == 0) {
+            user.setUserDiscountStartDate(null);
+            user.setUserDiscountEndDate(null);
+        } else {
+            user.setUserDiscountStartDate(startDate);
+            user.setUserDiscountEndDate(endDate);
+        }
+        return ResponseEntity.ok(userRepository.save(user));
+    }
+
+    // Toggle employee role (Admin only)
+    @PatchMapping("/{id}/employee")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<User> setEmployeeRole(@PathVariable("id") Long id,
+                                                @RequestBody java.util.Map<String, Object> body) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        boolean enabled = Boolean.parseBoolean(String.valueOf(body.get("enabled")));
+        Role employeeRole = roleRepository.findByName("ROLE_EMPLOYEE")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role not found"));
+
+        if (enabled) {
+            user.getRoles().add(employeeRole);
+        } else {
+            user.getRoles().removeIf(role -> "ROLE_EMPLOYEE".equals(role.getName()));
+        }
+
+        return ResponseEntity.ok(userRepository.save(user));
+    }
 
     //  Admin-only creation
     @PostMapping("/managers")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthResponse> createManager(@RequestBody SignupRequest req) {
         return ResponseEntity.ok(authService.registerManager(req));
+    }
+
+    private UserAdminDto toAdminDto(User user) {
+        UserAdminDto dto = new UserAdminDto();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setUsername(user.getRealUsername());
+        dto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toList()));
+        dto.setFlagged(user.isFlagged());
+        dto.setUserDiscountPercentage(user.getUserDiscountPercentage());
+        dto.setUserDiscountStartDate(user.getUserDiscountStartDate());
+        dto.setUserDiscountEndDate(user.getUserDiscountEndDate());
+        return dto;
+    }
+
+    private java.time.LocalDate parseDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty() || "null".equalsIgnoreCase(text)) {
+            return null;
+        }
+        return java.time.LocalDate.parse(text);
     }
 }

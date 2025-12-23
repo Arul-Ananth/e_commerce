@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
     Box,
     Button,
@@ -42,28 +42,8 @@ export default function Buy() {
     const [placing, setPlacing] = useState(false);
     const [error, setError] = useState("");
 
-    // --- FRONTEND LOGIC: Load Discounts from Local Storage ---
-    const [savedDiscounts, setSavedDiscounts] = useState({});
-
-    useEffect(() => {
-        const data = localStorage.getItem("cart_discounts");
-        if (data) {
-            setSavedDiscounts(JSON.parse(data));
-        }
-    }, []);
-
-    // Helper: Calculate Price for a single item
-    const getItemPrice = (item) => {
-        const originalPrice = Number(item.price) || 0;
-        const discount = savedDiscounts[item.id]; // Look up discount by Product ID
-
-        if (discount) {
-            const discountAmount = (originalPrice * discount.percentage) / 100;
-            return originalPrice - discountAmount;
-        }
-        return originalPrice;
-    };
-    // ---------------------------------------------------------
+    // Helper: Calculate Price for a single item (backend already applies discounts)
+    const getItemPrice = (item) => Number(item.finalPrice ?? item.price ?? 0);
 
     // Update Subtotal to use Discounted Prices
     const subtotal = useMemo(
@@ -73,7 +53,7 @@ export default function Buy() {
                 const qty = Number(item.quantity) || 0;
                 return sum + finalPrice * qty;
             }, 0),
-        [cartItems, savedDiscounts] // Re-run if discounts load
+        [cartItems]
     );
 
     // Calculate Savings for display
@@ -85,7 +65,7 @@ export default function Buy() {
                 const qty = Number(item.quantity) || 0;
                 return sum + (originalPrice - finalPrice) * qty;
             }, 0),
-        [cartItems, savedDiscounts]
+        [cartItems]
     );
 
     const handlePlaceOrder = async () => {
@@ -109,9 +89,6 @@ export default function Buy() {
                 window.location.href = res.redirectUrl;
                 return;
             }
-
-            // Cleanup local storage on successful order
-            localStorage.removeItem("cart_discounts");
 
             await clear();
             navigate("/", { replace: true });
@@ -179,9 +156,9 @@ export default function Buy() {
                             <List disablePadding>
                                 {cartItems.map((item) => {
                                     // Calculate Display Values
-                                    const discount = savedDiscounts[item.id];
+                                    const productDiscount = item.productDiscount;
                                     const finalPrice = getItemPrice(item);
-                                    const hasDiscount = discount && finalPrice < item.price;
+                                    const hasDiscount = Number(item.totalDiscountPercentage || 0) > 0;
 
                                     return (
                                         <React.Fragment key={item.id}>
@@ -216,26 +193,48 @@ export default function Buy() {
                                                         <Box sx={{ mt: 0.5 }}>
                                                             {/* Price Display Logic */}
                                                             <Stack direction="row" alignItems="center" spacing={1}>
-                                                                {hasDiscount && (
-                                                                    <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
-                                                                        {currency.format(Number(item.price))}
-                                                                    </Typography>
-                                                                )}
-                                                                <Typography variant="body2" fontWeight={hasDiscount ? "bold" : "normal"} color={hasDiscount ? "success.main" : "text.primary"}>
+                                                            {hasDiscount && (
+                                                                <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
+                                                                    {currency.format(Number(item.price))}
+                                                                </Typography>
+                                                            )}
+                                                            <Typography variant="body2" fontWeight={hasDiscount ? "bold" : "normal"} color={hasDiscount ? "success.main" : "text.primary"}>
                                                                     {currency.format(finalPrice)} x {item.quantity}
                                                                 </Typography>
                                                             </Stack>
 
                                                             {/* Green Discount Badge */}
                                                             {hasDiscount && (
-                                                                <Chip
-                                                                    icon={<LocalOfferIcon fontSize="small" style={{ color: 'inherit' }} />}
-                                                                    label={`${discount.description || 'Deal'} (-${discount.percentage}%)`}
-                                                                    size="small"
-                                                                    color="success"
-                                                                    variant="outlined"
-                                                                    sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
-                                                                />
+                                                                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap" }}>
+                                                                    {productDiscount && (
+                                                                        <Chip
+                                                                            icon={<LocalOfferIcon fontSize="small" style={{ color: 'inherit' }} />}
+                                                                            label={`${productDiscount.description || 'Deal'} (-${productDiscount.percentage}%)`}
+                                                                            size="small"
+                                                                            color="success"
+                                                                            variant="outlined"
+                                                                            sx={{ height: 20, fontSize: '0.7rem' }}
+                                                                        />
+                                                                    )}
+                                                                    {Number(item.userDiscountPercentage || 0) > 0 && (
+                                                                        <Chip
+                                                                            label={`User (-${item.userDiscountPercentage}%)`}
+                                                                            size="small"
+                                                                            color="success"
+                                                                            variant="outlined"
+                                                                            sx={{ height: 20, fontSize: '0.7rem' }}
+                                                                        />
+                                                                    )}
+                                                                    {Number(item.employeeDiscountPercentage || 0) > 0 && (
+                                                                        <Chip
+                                                                            label={`Employee (-${item.employeeDiscountPercentage}%)`}
+                                                                            size="small"
+                                                                            color="success"
+                                                                            variant="outlined"
+                                                                            sx={{ height: 20, fontSize: '0.7rem' }}
+                                                                        />
+                                                                    )}
+                                                                </Stack>
                                                             )}
                                                         </Box>
                                                     }

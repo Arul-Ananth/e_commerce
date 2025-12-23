@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, Button, Chip, CircularProgress, Alert
+    TableContainer, TableHead, TableRow, Button, Chip, CircularProgress, Alert, TextField
 } from '@mui/material';
 import FlagIcon from '@mui/icons-material/Flag';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { getAllUsers, deleteUser, flagUser, unflagUser } from '../../api/ApiService';
+import { getAllUsers, deleteUser, flagUser, unflagUser, updateUserDiscount, setEmployeeRole } from '../../api/ApiService';
 import { useAuth } from '../../global_component/AuthContext';
 
 export default function ManageUsers() {
     const [users, setUsers] = useState([]);
+    const [discountEdits, setDiscountEdits] = useState({});
+    const [discountStartEdits, setDiscountStartEdits] = useState({});
+    const [discountEndEdits, setDiscountEndEdits] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { user: currentUser } = useAuth();
@@ -66,6 +69,9 @@ export default function ManageUsers() {
             });
 
             setUsers(safeData);
+            setDiscountEdits({});
+            setDiscountStartEdits({});
+            setDiscountEndEdits({});
         } catch (error) {
             console.error("Silent refresh failed", error);
         }
@@ -99,6 +105,69 @@ export default function ManageUsers() {
         }
     };
 
+    const handleDiscountChange = (id, value) => {
+        setDiscountEdits((prev) => ({ ...prev, [id]: value }));
+    };
+
+    const handleDiscountStartChange = (id, value) => {
+        setDiscountStartEdits((prev) => ({ ...prev, [id]: value }));
+    };
+
+    const handleDiscountEndChange = (id, value) => {
+        setDiscountEndEdits((prev) => ({ ...prev, [id]: value }));
+    };
+
+    const handleDiscountSave = async (id) => {
+        const rawValue = discountEdits[id];
+        const percentage = rawValue === "" || rawValue === undefined ? 0 : Number(rawValue);
+        if (Number.isNaN(percentage) || percentage < 0 || percentage > 100) {
+            alert("Discount must be a number between 0 and 100.");
+            return;
+        }
+        const startDate = discountStartEdits[id];
+        const endDate = discountEndEdits[id];
+        if (percentage > 0 && !startDate) {
+            alert("Start date is required for a discount.");
+            return;
+        }
+        try {
+            await updateUserDiscount(id, percentage, startDate || null, endDate || null);
+            setDiscountEdits((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+            setDiscountStartEdits((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+            setDiscountEndEdits((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+            await refreshList();
+        } catch (err) {
+            alert("Failed to update discount.");
+        }
+    };
+
+    const handleEmployeeToggle = async (id, enabled) => {
+        try {
+            await setEmployeeRole(id, enabled);
+            await refreshList();
+        } catch (err) {
+            alert("Failed to update employee role.");
+        }
+    };
+
+    const getRoleNames = (roles) => (
+        Array.isArray(roles)
+            ? roles.map(r => (typeof r === 'string' ? r : r.name))
+            : []
+    );
+
     if (loading) return <Box p={4}><CircularProgress /></Box>;
     if (error) return <Box p={4}><Alert severity="error">{error}</Alert></Box>;
 
@@ -114,6 +183,10 @@ export default function ManageUsers() {
                             <TableCell>Username</TableCell>
                             <TableCell>Status</TableCell>
                             <TableCell>Roles</TableCell>
+                            <TableCell>User Discount (%)</TableCell>
+                            <TableCell>Discount Start</TableCell>
+                            <TableCell>Discount End</TableCell>
+                            <TableCell>Employee</TableCell>
                             <TableCell>Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -121,6 +194,11 @@ export default function ManageUsers() {
                         {users.map((u) => {
                             // Determine flag status for rendering
                             const isUserFlagged = u.isFlagged || u.flagged;
+                            const roleNames = getRoleNames(u.roles);
+                            const isEmployee = roleNames.includes('ROLE_EMPLOYEE');
+                            const discountValue = discountEdits[u.id] ?? (u.userDiscountPercentage ?? 0);
+                            const discountStartValue = discountStartEdits[u.id] ?? (u.userDiscountStartDate ?? "");
+                            const discountEndValue = discountEndEdits[u.id] ?? (u.userDiscountEndDate ?? "");
 
                             return (
                                 <TableRow key={u.id} sx={{ backgroundColor: isUserFlagged ? '#d32f2f' : 'inherit' }}>
@@ -135,9 +213,58 @@ export default function ManageUsers() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {Array.isArray(u.roles)
-                                            ? u.roles.map(r => (typeof r === 'string' ? r : r.name)).join(", ")
-                                            : "No Role"}
+                                        {roleNames.length ? roleNames.join(", ") : "No Role"}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <TextField
+                                                size="small"
+                                                type="number"
+                                                value={discountValue}
+                                                onChange={(e) => handleDiscountChange(u.id, e.target.value)}
+                                                inputProps={{ min: 0, max: 100, step: 1 }}
+                                                sx={{ width: 90 }}
+                                            />
+                                            <Button size="small" variant="outlined" onClick={() => handleDiscountSave(u.id)}>
+                                                Save
+                                            </Button>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            type="date"
+                                            value={discountStartValue}
+                                            onChange={(e) => handleDiscountStartChange(u.id, e.target.value)}
+                                            InputLabelProps={{ shrink: true }}
+                                            sx={{ width: 150 }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            type="date"
+                                            value={discountEndValue}
+                                            onChange={(e) => handleDiscountEndChange(u.id, e.target.value)}
+                                            InputLabelProps={{ shrink: true }}
+                                            sx={{ width: 150 }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={isEmployee ? "Employee" : "Not Employee"}
+                                            color={isEmployee ? "success" : "default"}
+                                            size="small"
+                                        />
+                                        {isAdmin && (
+                                            <Button
+                                                size="small"
+                                                sx={{ ml: 1 }}
+                                                onClick={() => handleEmployeeToggle(u.id, !isEmployee)}
+                                            >
+                                                {isEmployee ? "Remove" : "Make Employee"}
+                                            </Button>
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         {/* Managers can Flag active users */}

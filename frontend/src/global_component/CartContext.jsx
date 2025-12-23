@@ -30,7 +30,7 @@ export function CartProvider({ children }) {
         loadCart().catch(e => console.error("Cart init error:", e));
     }, [loadCart]);
 
-    const addToCart = useCallback(async (product, qty = 1) => {
+    const addToCart = useCallback(async (product, qty = 1, discountId = null) => {
         setCartItems((prev) => {
             const idx = prev.findIndex((p) => p.id === product.id);
             if (idx === -1) {
@@ -43,7 +43,8 @@ export function CartProvider({ children }) {
         });
 
         try {
-            await ApiService.addOrUpdateCartItem(product.id, qty);
+            const response = await ApiService.addOrUpdateCartItem(product.id, qty, discountId);
+            setCartItems(response?.items ?? []);
         } catch (e) {
             console.error("Add to cart failed", e);
             await loadCart();
@@ -54,7 +55,8 @@ export function CartProvider({ children }) {
     const updateQuantity = useCallback(async (productId, quantity) => {
         setCartItems((prev) => prev.map((p) => (p.id === productId ? { ...p, quantity } : p)));
         try {
-            await ApiService.updateCartItem(productId, quantity);
+            const response = await ApiService.updateCartItem(productId, quantity);
+            setCartItems(response?.items ?? []);
         } catch (e) {
             console.error("Update quantity failed", e);
             await loadCart();
@@ -66,7 +68,8 @@ export function CartProvider({ children }) {
         const prevSnapshot = cartItems;
         setCartItems((prev) => prev.filter((p) => p.id !== productId));
         try {
-            await ApiService.removeCartItem(productId);
+            const response = await ApiService.removeCartItem(productId);
+            setCartItems(response?.items ?? []);
         } catch (e) {
             console.error("Remove item failed", e);
             setCartItems(prevSnapshot);
@@ -78,7 +81,8 @@ export function CartProvider({ children }) {
         const prevSnapshot = cartItems;
         setCartItems([]);
         try {
-            await ApiService.clearCart();
+            const response = await ApiService.clearCart();
+            setCartItems(response?.items ?? []);
         } catch (e) {
             console.error("Clear cart failed", e);
             setCartItems(prevSnapshot);

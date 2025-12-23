@@ -33,6 +33,15 @@ public class User implements UserDetails {
 
     private Instant createdAt = Instant.now();
 
+    @Column(name = "user_discount_percentage")
+    private Double userDiscountPercentage = 0.0;
+
+    @Column(name = "user_discount_start_date")
+    private java.time.LocalDate userDiscountStartDate;
+
+    @Column(name = "user_discount_end_date")
+    private java.time.LocalDate userDiscountEndDate;
+
     // Mapping for USER_ROLES table
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -73,6 +82,15 @@ public class User implements UserDetails {
     public void setFlagged(boolean flagged) { isFlagged = flagged; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public boolean isFlagged() {        return isFlagged;    }
+
+    public Double getUserDiscountPercentage() { return userDiscountPercentage; }
+    public void setUserDiscountPercentage(Double userDiscountPercentage) { this.userDiscountPercentage = userDiscountPercentage; }
+
+    public java.time.LocalDate getUserDiscountStartDate() { return userDiscountStartDate; }
+    public void setUserDiscountStartDate(java.time.LocalDate userDiscountStartDate) { this.userDiscountStartDate = userDiscountStartDate; }
+
+    public java.time.LocalDate getUserDiscountEndDate() { return userDiscountEndDate; }
+    public void setUserDiscountEndDate(java.time.LocalDate userDiscountEndDate) { this.userDiscountEndDate = userDiscountEndDate; }
 
 
 }

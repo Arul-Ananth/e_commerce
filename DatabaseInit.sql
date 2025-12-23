@@ -38,6 +38,9 @@ CREATE TABLE users (
     username VARCHAR(100),
     is_flagged BOOLEAN DEFAULT FALSE,
     enabled BOOLEAN DEFAULT TRUE,
+    user_discount_percentage DOUBLE DEFAULT 0,
+    user_discount_start_date DATE,
+    user_discount_end_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -113,6 +116,7 @@ CREATE TABLE discount (
 INSERT INTO roles (name) VALUES ('ROLE_USER');
 INSERT INTO roles (name) VALUES ('ROLE_ADMIN');
 INSERT INTO roles (name) VALUES ('ROLE_MANAGER');
+INSERT INTO roles (name) VALUES ('ROLE_EMPLOYEE');
 
 -- 3b. Insert Users
 -- Admin: admin@ecommerce.com / admin123

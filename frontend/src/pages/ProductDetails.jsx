@@ -19,11 +19,13 @@ import {
     RadioGroup,
     FormControlLabel,
     FormControl,
-    FormLabel
+    FormLabel,
+    Chip
 } from "@mui/material";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
 import DeleteIcon from "@mui/icons-material/Delete";
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
 import { fetchProduct, fetchReviews, deleteProduct } from "../api/ApiService.jsx";
 import { useCart } from "../global_component/CartContext";
@@ -39,6 +41,7 @@ function ProductDetails() {
 
     // NEW: State for selected discount
     const [selectedDiscount, setSelectedDiscount] = useState(null);
+    const [hasUserSelectedDiscount, setHasUserSelectedDiscount] = useState(false);
 
     // Auth & Cart
     const { addToCart } = useCart();
@@ -53,27 +56,25 @@ function ProductDetails() {
     useEffect(() => {
         fetchProduct(id).then((data) => setProduct(data));
         fetchReviews(id).then((data) => setReviews(data));
+        setSelectedDiscount(null);
+        setHasUserSelectedDiscount(false);
     }, [id]);
+
+    useEffect(() => {
+        if (!product?.discounts?.length || selectedDiscount || hasUserSelectedDiscount) return;
+        const bestDiscount = getBestDiscount(product.discounts);
+        if (bestDiscount) {
+            setSelectedDiscount(bestDiscount);
+        }
+    }, [product, selectedDiscount, hasUserSelectedDiscount]);
 
     if (!product) return <p>Loading product...</p>;
 
 
     const handleAddToCart = async () => {
         try {
-            await addToCart(product, 1);
-
-            // --- FRONTEND ONLY FIX: Save Discount to Local Storage ---
-            if (selectedDiscount) {
-                // Get existing discounts map or create new one
-                const savedDiscounts = JSON.parse(localStorage.getItem("cart_discounts") || "{}");
-
-                // Save this discount mapped by Product ID
-                savedDiscounts[product.id] = selectedDiscount;
-
-                // Write back to storage
-                localStorage.setItem("cart_discounts", JSON.stringify(savedDiscounts));
-            }
-            // ---------------------------------------------------------
+            const discountId = selectedDiscount ? selectedDiscount.id : 0;
+            await addToCart(product, 1, discountId);
 
         } catch (e) {
             console.error("Error adding to cart:", e);
@@ -113,6 +114,7 @@ function ProductDetails() {
     // NEW: Handle Radio Change
     const handleDiscountChange = (event) => {
         const discountId = parseInt(event.target.value);
+        setHasUserSelectedDiscount(true);
         if (isNaN(discountId)) {
             setSelectedDiscount(null); // Case for "No Discount"
         } else {
@@ -128,6 +130,38 @@ function ProductDetails() {
         return (product.price - discountAmount).toFixed(2);
     };
 
+    const isDiscountActive = (discount) => {
+        if (!discount) return false;
+        const today = new Date();
+        const start = discount.startDate ? new Date(`${discount.startDate}T00:00:00`) : null;
+        const end = discount.endDate ? new Date(`${discount.endDate}T23:59:59`) : null;
+        if (start && start > today) return false;
+        if (end && end < today) return false;
+        return true;
+    };
+
+    const getBestDiscount = (discounts) => {
+        const activeDiscounts = discounts.filter(isDiscountActive);
+        if (!activeDiscounts.length) return null;
+        return activeDiscounts.reduce((best, current) => (
+            current.percentage > best.percentage ? current : best
+        ), activeDiscounts[0]);
+    };
+
+    const isUserDiscountActive = () => {
+        const percentage = user?.userDiscountPercentage || 0;
+        if (percentage <= 0) return false;
+        if (!user?.userDiscountStartDate) return false;
+        const today = new Date();
+        const start = new Date(`${user.userDiscountStartDate}T00:00:00`);
+        const end = user.userDiscountEndDate ? new Date(`${user.userDiscountEndDate}T23:59:59`) : null;
+        if (start > today) return false;
+        if (end && end < today) return false;
+        return true;
+    };
+
+    const activeDiscounts = product.discounts ? product.discounts.filter(isDiscountActive) : [];
+
     return (
         <Box sx={{ p: 4 }}>
             <Typography variant="h4" gutterBottom>
@@ -135,7 +169,7 @@ function ProductDetails() {
             </Typography>
 
             {/* --- MODIFIED DISCOUNT SECTION WITH RADIO BUTTONS --- */}
-            {product.discounts && product.discounts.length > 0 && (
+            {activeDiscounts.length > 0 && (
                 <Box sx={{ mt: 2 }}>
                     <FormControl component="fieldset" fullWidth>
                         <FormLabel component="legend" sx={{ mb: 1, color: 'text.secondary' }}>
@@ -155,7 +189,7 @@ function ProductDetails() {
                             />
 
                             {/* Option 2..N: Dynamic Discounts */}
-                            {product.discounts.map((discount, i) => (
+                            {activeDiscounts.map((discount, i) => (
                                 <FormControlLabel
                                     key={i}
                                     value={discount.id}
@@ -234,6 +268,16 @@ function ProductDetails() {
                             <Typography variant="h5">
                                 Price: ₹{product.price}
                             </Typography>
+                        )}
+                        {isUserDiscountActive() && (
+                            <Chip
+                                icon={<LocalOfferIcon fontSize="small" style={{ color: 'inherit' }} />}
+                                label={`User discount (-${user.userDiscountPercentage}%)`}
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                                sx={{ mt: 1 }}
+                            />
                         )}
                     </Box>
 

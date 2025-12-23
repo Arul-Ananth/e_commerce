@@ -111,15 +111,21 @@ async function getCart() {
     return data.items ?? [];
 }
 
-export async function addOrUpdateCartItem(productId, quantity) {
+export async function addOrUpdateCartItem(productId, quantity, discountId = null) {
     // Endpoint: POST /api/v1/cart/items
-    const { data } = await api.post("/cart/items", { productId, quantity });
+    const { data } = await api.post("/cart/items", { productId, quantity, discountId });
     return data;
 }
 
 async function updateCartItem(productId, quantity) {
     // Endpoint: PATCH /api/v1/cart/items/{id}
     const { data } = await api.patch(`/cart/items/${productId}`, { quantity });
+    return data;
+}
+
+export async function updateCartItemDiscount(productId, discountId) {
+    // Endpoint: PATCH /api/v1/cart/items/{id}/discount
+    const { data } = await api.patch(`/cart/items/${productId}/discount`, { discountId });
     return data;
 }
 
@@ -197,6 +203,16 @@ export async function registerManager(managerData) {
     return data;
 }
 
+export async function updateUserDiscount(userId, percentage, startDate = null, endDate = null) {
+    const { data } = await api.patch(`/users/${userId}/discount`, { percentage, startDate, endDate });
+    return data;
+}
+
+export async function setEmployeeRole(userId, enabled) {
+    const { data } = await api.patch(`/users/${userId}/employee`, { enabled });
+    return data;
+}
+
 // ... existing imports
 
 
@@ -225,6 +241,7 @@ export default {
     getCart,
     addOrUpdateCartItem,
     updateCartItem,
+    updateCartItemDiscount,
     removeCartItem,
     clearCart,
     startCheckout,
@@ -242,6 +259,8 @@ export default {
     unflagUser,
     deleteUser,
     registerManager,
+    updateUserDiscount,
+    setEmployeeRole,
     uploadImage,
 
 };
