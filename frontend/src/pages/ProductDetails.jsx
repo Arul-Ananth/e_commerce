@@ -9,11 +9,6 @@ import {
     CardMedia,
     Rating,
     Stack,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions,
     // NEW IMPORTS FOR RADIO BUTTONS
     Radio,
     RadioGroup,
@@ -24,10 +19,9 @@ import {
 } from "@mui/material";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
-import DeleteIcon from "@mui/icons-material/Delete";
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
-import { fetchProduct, fetchReviews, deleteProduct } from "../api/ApiService.jsx";
+import { fetchProduct, fetchReviews } from "../api/ApiService.jsx";
 import { useCart } from "../global_component/CartContext";
 import { useAuth } from "../global_component/AuthContext";
 
@@ -46,12 +40,6 @@ function ProductDetails() {
     // Auth & Cart
     const { addToCart } = useCart();
     const { isAuthenticated, user } = useAuth();
-
-    // Check if Admin
-    const isAdmin = user?.roles?.includes('ROLE_ADMIN');
-
-    // Delete Modal State
-    const [openDelete, setOpenDelete] = useState(false);
 
     useEffect(() => {
         fetchProduct(id).then((data) => setProduct(data));
@@ -89,26 +77,6 @@ function ProductDetails() {
         }
         await handleAddToCart();
         navigate("/checkout");
-    };
-
-    // --- Delete Logic ---
-    const handleDeleteClick = () => {
-        setOpenDelete(true);
-    };
-
-    const handleConfirmDelete = async () => {
-        try {
-            await deleteProduct(id);
-            setOpenDelete(false);
-            navigate("/", { replace: true });
-        } catch (err) {
-            console.error("Failed to delete product", err);
-            alert("Failed to delete product. It might be in a user's cart.");
-        }
-    };
-
-    const handleCancelDelete = () => {
-        setOpenDelete(false);
     };
 
     // NEW: Handle Radio Change
@@ -304,18 +272,6 @@ function ProductDetails() {
                             </Button>
                         </Stack>
 
-                        {/* Admin Only Delete Button */}
-                        {isAdmin && (
-                            <Button
-                                variant="outlined"
-                                color="error"
-                                startIcon={<DeleteIcon />}
-                                onClick={handleDeleteClick}
-                                sx={{ mt: 2 }}
-                            >
-                                Delete Product (Admin)
-                            </Button>
-                        )}
                     </Stack>
                 </Grid>
             </Grid>
@@ -342,29 +298,6 @@ function ProductDetails() {
                 )}
             </Box>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-                open={openDelete}
-                onClose={handleCancelDelete}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-            >
-                <DialogTitle id="alert-dialog-title">
-                    {"Delete this product?"}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText id="alert-dialog-description">
-                        Are you sure you want to permanently delete <strong>{product.name}</strong>?
-                        This action cannot be undone.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCancelDelete}>Cancel</Button>
-                    <Button onClick={handleConfirmDelete} color="error" autoFocus>
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </Box>
     );
 }

@@ -12,6 +12,8 @@ import Login from "./pages/Login.jsx";
 import AddProduct from "./pages/admin/AddProduct";
 import AddManager from "./pages/admin/AddManager";
 import ManageUsers from "./pages/admin/ManageUsers";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import ManagerDashboard from "./pages/admin/ManagerDashboard";
 
 // --- Route Wrappers ---
 import AdminRoute from "./global_component/AdminRoute";
@@ -52,6 +54,7 @@ export default function App() {
                         {/* --- ADMIN ONLY ROUTES --- */}
                         {/* Only ROLE_ADMIN can access these */}
                         <Route element={<AdminRoute />}>
+                            <Route path="/admin/dashboard" element={<AdminDashboard />} />
                             <Route path="/admin/add-product" element={<AddProduct />} />
                             <Route path="/admin/add-manager" element={<AddManager />} />
                             <Route path="/admin/users" element={<ManageUsers />} />
@@ -60,6 +63,7 @@ export default function App() {
                         {/* --- MANAGER ROUTES --- */}
                         {/* ROLE_MANAGER (and usually ADMIN) can access these */}
                         <Route element={<ManagerRoute />}>
+                            <Route path="/manager/dashboard" element={<ManagerDashboard />} />
                             {/* Managers reuse the same Add Product page */}
                             <Route path="/manager/add-product" element={<AddProduct />} />
                             {/* Managers reuse the same User Management page (but with fewer buttons) */}
