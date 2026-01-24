@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // Update to match your Spring Boot "api/v1" standard
-const API_BASE = 'http://localhost:8080/api/v1';
-const API_BASE_AUTH = 'http://localhost:8080/auth';
+const API_BASE = '/api/v1';
+const API_BASE_AUTH = '/auth';
 
 // ---- Axios Instances ----
 const api = axios.create({
