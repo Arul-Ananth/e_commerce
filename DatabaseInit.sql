@@ -121,7 +121,7 @@ INSERT INTO roles (name) VALUES ('ROLE_EMPLOYEE');
 -- 3b. Insert Users
 -- Admin: admin@ecommerce.com / admin123
 INSERT INTO users (email, password, username, is_flagged, enabled) 
-VALUES ('admin@ecommerce.com', 'admin123', 'Super Admin', false, true);
+VALUES ('admin@ecommerce.com', '$2a$10$ehYWzot3e82Pdz0CHG/2JObImXBJypWBlto0dykq00dubbC97veWK', 'Super Admin', false, true);
 
 -- User: user@ecommerce.com / user123
 INSERT INTO users (email, password, username, is_flagged, enabled) 

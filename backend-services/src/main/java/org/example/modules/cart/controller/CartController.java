@@ -1,0 +1,75 @@
+package org.example.modules.cart.controller;
+
+import org.example.modules.cart.dto.CartResponse;
+import org.example.modules.users.model.User;
+import org.example.modules.cart.service.CartService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/cart")
+public class CartController {
+
+    private final CartService cart;
+
+    public CartController(CartService cart) {
+        this.cart = cart;
+    }
+
+    // GET /api/v1/cart
+    @GetMapping
+    public ResponseEntity<CartResponse> getCart(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(cart.getCart(user));
+    }
+
+    // POST /api/v1/cart/items
+    @PostMapping("/items")
+    public ResponseEntity<CartResponse> addOrUpdate(@AuthenticationPrincipal User user,
+                                                    @RequestBody Map<String, Object> body) {
+        Long productId = ((Number) body.get("productId")).longValue();
+        int quantity = ((Number) body.get("quantity")).intValue();
+        Long discountId = null;
+        if (body.containsKey("discountId") && body.get("discountId") != null) {
+            discountId = ((Number) body.get("discountId")).longValue();
+        }
+        return ResponseEntity.ok(cart.addOrIncrement(user, productId, quantity, discountId));
+    }
+
+    // PATCH /api/v1/cart/items/{productId}
+    @PatchMapping("/items/{productId}")
+    public ResponseEntity<CartResponse> updateQuantity(@AuthenticationPrincipal User user,
+                                                       @PathVariable("productId") Long productId, // FIX: Added ("productId")
+                                                       @RequestBody Map<String, Object> body) {
+        int quantity = ((Number) body.get("quantity")).intValue();
+        return ResponseEntity.ok(cart.setQuantity(user, productId, quantity));
+    }
+
+    // PATCH /api/v1/cart/items/{productId}/discount
+    @PatchMapping("/items/{productId}/discount")
+    public ResponseEntity<CartResponse> updateDiscount(@AuthenticationPrincipal User user,
+                                                       @PathVariable("productId") Long productId,
+                                                       @RequestBody Map<String, Object> body) {
+        Long discountId = null;
+        if (body.containsKey("discountId") && body.get("discountId") != null) {
+            discountId = ((Number) body.get("discountId")).longValue();
+        }
+        return ResponseEntity.ok(cart.updateItemDiscount(user, productId, discountId));
+    }
+
+    // DELETE /api/v1/cart/items/{productId}
+    @DeleteMapping("/items/{productId}")
+    public ResponseEntity<CartResponse> removeItem(@AuthenticationPrincipal User user,
+                                                   @PathVariable("productId") Long productId) { // FIX: Added ("productId")
+        return ResponseEntity.ok(cart.removeItem(user, productId));
+    }
+
+    // DELETE /api/v1/cart (Clear cart)
+    @DeleteMapping
+    public ResponseEntity<CartResponse> clear(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(cart.clear(user));
+    }
+}
+
