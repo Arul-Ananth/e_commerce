@@ -5,6 +5,7 @@ import {
     Drawer,
     List,
     ListItem,
+    ListItemButton,
     ListItemText,
     Divider,
     IconButton,
@@ -47,26 +48,33 @@ const Sidebar = ({ drawerOpen, toggleDrawer, categories, selectedCategory, setSe
             </Toolbar>
             <Divider />
             <List>
-                <ListItem button onClick={() => { setSelectedCategory('All'); if (isSmall) handleClose(); }} selected={selectedCategory === 'All'}>
-                    <ListItemText primary="All Categories" />
+                <ListItem disablePadding>
+                    <ListItemButton
+                        onClick={() => { setSelectedCategory('All'); if (isSmall) handleClose(); }}
+                        selected={selectedCategory === 'All'}
+                    >
+                        <ListItemText primary="All Categories" />
+                    </ListItemButton>
                 </ListItem>
                 <Divider />
                 {categories.map((category, index) => (
-                    <ListItem
-                        button
-                        key={index}
-                        onClick={() => { setSelectedCategory(category); if (isSmall) handleClose(); }}
-                        selected={selectedCategory === category}
-                    >
-                        <ListItemText primary={category} />
+                    <ListItem key={index} disablePadding>
+                        <ListItemButton
+                            onClick={() => { setSelectedCategory(category); if (isSmall) handleClose(); }}
+                            selected={selectedCategory === category}
+                        >
+                            <ListItemText primary={category} />
+                        </ListItemButton>
                     </ListItem>
                 ))}
                 {/* Optional explicit close action for larger screens */}
                 {!isSmall && (
                     <>
                         <Divider />
-                        <ListItem button onClick={handleClose}>
-                            <ListItemText primary="Close" />
+                        <ListItem disablePadding>
+                            <ListItemButton onClick={handleClose}>
+                                <ListItemText primary="Close" />
+                            </ListItemButton>
                         </ListItem>
                     </>
                 )}

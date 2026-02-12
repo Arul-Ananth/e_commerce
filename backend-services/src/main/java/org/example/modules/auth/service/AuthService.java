@@ -37,24 +37,24 @@ public class AuthService {
 
     public AuthResponse signup(SignupRequest req) {
         // Validate Inputs
-        if (req.getEmail() == null || req.getEmail().isBlank() ||
-                req.getPassword() == null || req.getPassword().isBlank()) {
+        if (req.email() == null || req.email().isBlank() ||
+                req.password() == null || req.password().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password are required");
         }
-        if (userRepository.existsByEmail(req.getEmail())) {
+        if (userRepository.existsByEmail(req.email())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
         // Create User
         User user = new User();
-        user.setEmail(req.getEmail());
-        user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setEmail(req.email());
+        user.setPassword(passwordEncoder.encode(req.password()));
 
         // Save Username (if provided, otherwise fallback to email prefix or null)
-        if (req.getUsername() != null && !req.getUsername().isBlank()) {
-            user.setRealUsername(req.getUsername()); // Calls the setter we made in User.java
+        if (req.username() != null && !req.username().isBlank()) {
+            user.setRealUsername(req.username()); // Calls the setter we made in User.java
         } else {
-            user.setRealUsername(req.getEmail().split("@")[0]);
+            user.setRealUsername(req.email().split("@")[0]);
         }
 
         // Assign Default Role
@@ -107,14 +107,14 @@ public class AuthService {
 
     public AuthResponse registerManager(SignupRequest req) {
         // Reuse your signup logic but force the role
-        if (userRepository.existsByEmail(req.getEmail())) {
+        if (userRepository.existsByEmail(req.email())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
         User user = new User();
-        user.setEmail(req.getEmail());
-        user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setRealUsername(req.getUsername() != null ? req.getUsername() : "Manager");
+        user.setEmail(req.email());
+        user.setPassword(passwordEncoder.encode(req.password()));
+        user.setRealUsername(req.username() != null ? req.username() : "Manager");
 
         // Assign ROLE_MANAGER
         Role managerRole = roleRepository.findByName("ROLE_MANAGER")

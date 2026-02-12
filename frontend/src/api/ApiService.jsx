@@ -1,12 +1,11 @@
 import axios from "axios";
 
-// Update to match your Spring Boot "api/v1" standard
-const API_BASE = '/api/v1';
-const API_BASE_AUTH = '/auth';
+const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
+const AUTH_PREFIX = import.meta.env.VITE_AUTH_PREFIX || "/auth";
 
 // ---- Axios Instances ----
 const api = axios.create({
-    baseURL: API_BASE,
+    baseURL: API_PREFIX,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json'
@@ -14,7 +13,7 @@ const api = axios.create({
 });
 
 const authApi = axios.create({
-    baseURL: API_BASE_AUTH,
+    baseURL: AUTH_PREFIX,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json'
@@ -25,8 +24,11 @@ const authApi = axios.create({
 
 export async function fetchCategories() {
     try {
-        const res = await fetch(`${API_BASE}/categories`);
+        const res = await fetch(`${API_PREFIX}/categories`);
         if (!res.ok) throw new Error("Failed to fetch categories");
+        if (!res.headers.get("content-type")?.includes("application/json")) {
+            throw new Error("Categories endpoint returned non-JSON response");
+        }
         const data = await res.json();
         // Return "All" plus the list from backend
         return ['All', ...data];
@@ -40,11 +42,14 @@ export async function fetchProducts(category) {
     try {
         // New Endpoint Logic
         const url = category === 'All' || !category
-            ? `${API_BASE}/products`
-            : `${API_BASE}/products/category/${category}`;
+            ? `${API_PREFIX}/products`
+            : `${API_PREFIX}/products/category/${category}`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error("Failed to fetch products");
+        if (!res.headers.get("content-type")?.includes("application/json")) {
+            throw new Error("Products endpoint returned non-JSON response");
+        }
         return await res.json();
     } catch (err) {
         console.error('Error fetching products:', err);
@@ -54,7 +59,7 @@ export async function fetchProducts(category) {
 
 export async function fetchProduct(id) {
     try {
-        const res = await fetch(`${API_BASE}/products/${id}`);
+        const res = await fetch(`${API_PREFIX}/products/${id}`);
         if (!res.ok) throw new Error("Failed to fetch product");
         return await res.json();
     } catch (err) {
@@ -66,7 +71,7 @@ export async function fetchProduct(id) {
 export async function fetchReviews(productId) {
     try {
         // New Nested Endpoint: /products/{id}/reviews
-        const res = await fetch(`${API_BASE}/products/${productId}/reviews`);
+        const res = await fetch(`${API_PREFIX}/products/${productId}/reviews`);
         if (!res.ok) throw new Error("Failed to fetch reviews");
         return await res.json();
     } catch (err) {
