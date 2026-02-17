@@ -138,16 +138,16 @@ public class UserController {
     }
 
     private UserAdminDto toAdminDto(User user) {
-        UserAdminDto dto = new UserAdminDto();
-        dto.setId(user.getId());
-        dto.setEmail(user.getEmail());
-        dto.setUsername(user.getRealUsername());
-        dto.setRoles(user.getRoles().stream().map(Role::getName).toList());
-        dto.setFlagged(user.isFlagged());
-        dto.setUserDiscountPercentage(user.getUserDiscountPercentage());
-        dto.setUserDiscountStartDate(user.getUserDiscountStartDate());
-        dto.setUserDiscountEndDate(user.getUserDiscountEndDate());
-        return dto;
+        return new UserAdminDto(
+                user.getId(),
+                user.getEmail(),
+                user.getRealUsername(),
+                user.getRoles().stream().map(Role::getName).toList(),
+                user.isFlagged(),
+                user.getUserDiscountPercentage(),
+                user.getUserDiscountStartDate(),
+                user.getUserDiscountEndDate()
+        );
     }
 
     private java.time.LocalDate parseDate(Object value) {

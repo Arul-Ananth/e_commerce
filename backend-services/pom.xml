@@ -6,22 +6,22 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.example</groupId>
-    <artifactId>springboot-java21-demo</artifactId>
+    <artifactId>springboot-java25-demo</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Spring Boot Java 21 Demo</name>
-    <description>Demo project for Spring Boot with Java 21</description>
+    <name>Spring Boot Java 25 Demo</name>
+    <description>Demo project for Spring Boot with Java 25</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.4</version>
+        <version>3.5.0</version>
         <relativePath/>
     </parent>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <jjwt.version>0.11.5</jjwt.version>
     </properties>
 
@@ -111,8 +111,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

@@ -127,7 +127,6 @@ public class CartService {
     private CartResponse toResponse(Cart cart) {
         List<CartItemDto> items = cart.getItems().stream()
                 .map(ci -> {
-                    var dto = new CartItemDto();
                     Discount activeSelected = getActiveSelectedDiscount(ci.getSelectedDiscount());
                     double productDiscountPercentage = activeSelected != null ? activeSelected.getPercentage() : 0.0;
                     double userDiscountPercentage = getActiveUserDiscountPercentage(ci.getCart().getUser());
@@ -142,19 +141,18 @@ public class CartService {
                     BigDecimal finalPrice = basePrice.multiply(
                             BigDecimal.valueOf(1 - (totalDiscountPercentage / 100.0))
                     );
-
-                    dto.setId(ci.getProduct().getId());
-                    // Assuming Product getters: getTitle(), getPrice(), getImageUrl()
-                    dto.setTitle(ci.getProduct().getName());
-                    dto.setPrice(basePrice);
-                    dto.setFinalPrice(finalPrice);
-                    dto.setImageUrl(ci.getProduct().getImages().getFirst());
-                    dto.setQuantity(ci.getQuantity());
-                    dto.setProductDiscount(mapDiscount(activeSelected));
-                    dto.setUserDiscountPercentage(userDiscountPercentage);
-                    dto.setEmployeeDiscountPercentage(employeeDiscountPercentage);
-                    dto.setTotalDiscountPercentage(totalDiscountPercentage);
-                    return dto;
+                    return new CartItemDto(
+                            ci.getProduct().getId(),
+                            ci.getProduct().getName(),
+                            basePrice,
+                            finalPrice,
+                            ci.getProduct().getImages().getFirst(),
+                            ci.getQuantity(),
+                            mapDiscount(activeSelected),
+                            userDiscountPercentage,
+                            employeeDiscountPercentage,
+                            totalDiscountPercentage
+                    );
                 })
                 .toList();
         return new CartResponse(items);
@@ -224,13 +222,13 @@ public class CartService {
         if (discount == null) {
             return null;
         }
-        CartItemDiscountDto dto = new CartItemDiscountDto();
-        dto.setId(discount.getId());
-        dto.setDescription(discount.getDescription());
-        dto.setPercentage(discount.getPercentage());
-        dto.setStartDate(discount.getStartDate());
-        dto.setEndDate(discount.getEndDate());
-        return dto;
+        return new CartItemDiscountDto(
+                discount.getId(),
+                discount.getDescription(),
+                discount.getPercentage(),
+                discount.getStartDate(),
+                discount.getEndDate()
+        );
     }
 
 

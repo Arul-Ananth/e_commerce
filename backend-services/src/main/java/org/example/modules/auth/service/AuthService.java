@@ -52,7 +52,7 @@ public class AuthService {
 
         // Save Username (if provided, otherwise fallback to email prefix or null)
         if (req.username() != null && !req.username().isBlank()) {
-            user.setRealUsername(req.username()); // Calls the setter we made in User.java
+            user.setRealUsername(req.username());
         } else {
             user.setRealUsername(req.email().split("@")[0]);
         }
