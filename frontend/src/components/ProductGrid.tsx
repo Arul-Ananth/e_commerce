@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Box } from '@mui/material';
-import ProductCard from './ProductCard.jsx';
+import ProductCard from './ProductCard';
 
 const ProductGrid = ({ products }) => (
   <Box
@@ -26,3 +26,4 @@ const ProductGrid = ({ products }) => (
 );
 
 export default ProductGrid;
+

@@ -1,5 +1,5 @@
 import React from "react";
-import Body from "../components/Body.jsx";
+import Body from "../components/Body";
 
 function MainPage({ drawerOpen, toggleDrawer }) {
     const [selectedCategory, setSelectedCategory] = React.useState("All");
@@ -15,3 +15,4 @@ function MainPage({ drawerOpen, toggleDrawer }) {
 }
 
 export default MainPage;
+

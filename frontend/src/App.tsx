@@ -3,10 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import Header from "./components/Header";
 import MainPage from "./pages/MainPage";
 
-import SignUp from "./pages/SignUp.jsx";
+import SignUp from "./pages/SignUp";
 import ProductDetails from "./pages/ProductDetails";
-import Buy from "./pages/Buy.jsx";
-import Login from "./pages/Login.jsx";
+import Buy from "./pages/Buy";
+import Login from "./pages/Login";
 
 // --- Admin & Manager Components ---
 import AddProduct from "./pages/admin/AddProduct";
@@ -88,3 +88,4 @@ export default function App() {
         </AuthProvider>
     );
 }
+

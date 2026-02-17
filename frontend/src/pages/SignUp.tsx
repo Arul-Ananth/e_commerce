@@ -7,7 +7,7 @@ import {
     Paper,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import apiService from "../api/ApiService.jsx";
+import apiService from "../api/ApiService";
 
 function SignUp() {
     const [formData, setFormData] = useState({

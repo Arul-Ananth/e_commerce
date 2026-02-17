@@ -24,9 +24,9 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import LocalOfferIcon from '@mui/icons-material/LocalOffer'; // Added Icon
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../global_component/CartContext.jsx";
-import { useAuth } from "../global_component/AuthContext.jsx";
-import ApiService from "../api/ApiService.jsx";
+import { useCart } from "../global_component/CartContext";
+import { useAuth } from "../global_component/AuthContext";
+import ApiService from "../api/ApiService";
 
 const currency = new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -310,3 +310,4 @@ function Row({ label, value }) {
         </Stack>
     );
 }
+

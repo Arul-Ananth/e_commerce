@@ -21,7 +21,7 @@ import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
-import { fetchProduct, fetchReviews } from "../api/ApiService.jsx";
+import { fetchProduct, fetchReviews } from "../api/ApiService";
 import { useCart } from "../global_component/CartContext";
 import { useAuth } from "../global_component/AuthContext";
 
@@ -303,3 +303,4 @@ function ProductDetails() {
 }
 
 export default ProductDetails;
+
