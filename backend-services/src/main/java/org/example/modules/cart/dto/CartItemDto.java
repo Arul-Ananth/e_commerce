@@ -10,7 +10,8 @@ public record CartItemDto(
         String imageUrl,
         int quantity,
         CartItemDiscountDto productDiscount,
-        double userDiscountPercentage,
-        double employeeDiscountPercentage,
-        double totalDiscountPercentage
-) {}
+        BigDecimal userDiscountPercentage,
+        BigDecimal employeeDiscountPercentage,
+        BigDecimal totalDiscountPercentage
+) {
+}

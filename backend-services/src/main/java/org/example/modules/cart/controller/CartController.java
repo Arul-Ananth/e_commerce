@@ -1,75 +1,59 @@
 package org.example.modules.cart.controller;
 
+import jakarta.validation.Valid;
 import org.example.modules.cart.dto.CartResponse;
-import org.example.modules.users.model.User;
+import org.example.modules.cart.dto.request.AddCartItemRequest;
+import org.example.modules.cart.dto.request.UpdateCartItemDiscountRequest;
+import org.example.modules.cart.dto.request.UpdateCartItemQuantityRequest;
 import org.example.modules.cart.service.CartService;
+import org.example.modules.users.model.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/cart")
 public class CartController {
 
-    private final CartService cart;
+    private final CartService cartService;
 
-    public CartController(CartService cart) {
-        this.cart = cart;
+    public CartController(CartService cartService) {
+        this.cartService = cartService;
     }
 
-    // GET /api/v1/cart
     @GetMapping
     public ResponseEntity<CartResponse> getCart(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(cart.getCart(user));
+        return ResponseEntity.ok(cartService.getCart(user));
     }
 
-    // POST /api/v1/cart/items
     @PostMapping("/items")
-    public ResponseEntity<CartResponse> addOrUpdate(@AuthenticationPrincipal User user,
-                                                    @RequestBody Map<String, Object> body) {
-        Long productId = ((Number) body.get("productId")).longValue();
-        int quantity = ((Number) body.get("quantity")).intValue();
-        Long discountId = null;
-        if (body.containsKey("discountId") && body.get("discountId") != null) {
-            discountId = ((Number) body.get("discountId")).longValue();
-        }
-        return ResponseEntity.ok(cart.addOrIncrement(user, productId, quantity, discountId));
+    public ResponseEntity<CartResponse> addItem(@AuthenticationPrincipal User user,
+                                                @Valid @RequestBody AddCartItemRequest request) {
+        return ResponseEntity.ok(cartService.addOrIncrement(user, request.productId(), request.quantity(), request.discountId()));
     }
 
-    // PATCH /api/v1/cart/items/{productId}
     @PatchMapping("/items/{productId}")
     public ResponseEntity<CartResponse> updateQuantity(@AuthenticationPrincipal User user,
-                                                       @PathVariable("productId") Long productId, // FIX: Added ("productId")
-                                                       @RequestBody Map<String, Object> body) {
-        int quantity = ((Number) body.get("quantity")).intValue();
-        return ResponseEntity.ok(cart.setQuantity(user, productId, quantity));
+                                                       @PathVariable("productId") Long productId,
+                                                       @Valid @RequestBody UpdateCartItemQuantityRequest request) {
+        return ResponseEntity.ok(cartService.setQuantity(user, productId, request.quantity()));
     }
 
-    // PATCH /api/v1/cart/items/{productId}/discount
     @PatchMapping("/items/{productId}/discount")
     public ResponseEntity<CartResponse> updateDiscount(@AuthenticationPrincipal User user,
                                                        @PathVariable("productId") Long productId,
-                                                       @RequestBody Map<String, Object> body) {
-        Long discountId = null;
-        if (body.containsKey("discountId") && body.get("discountId") != null) {
-            discountId = ((Number) body.get("discountId")).longValue();
-        }
-        return ResponseEntity.ok(cart.updateItemDiscount(user, productId, discountId));
+                                                       @Valid @RequestBody UpdateCartItemDiscountRequest request) {
+        return ResponseEntity.ok(cartService.updateItemDiscount(user, productId, request.discountId()));
     }
 
-    // DELETE /api/v1/cart/items/{productId}
     @DeleteMapping("/items/{productId}")
     public ResponseEntity<CartResponse> removeItem(@AuthenticationPrincipal User user,
-                                                   @PathVariable("productId") Long productId) { // FIX: Added ("productId")
-        return ResponseEntity.ok(cart.removeItem(user, productId));
+                                                   @PathVariable("productId") Long productId) {
+        return ResponseEntity.ok(cartService.removeItem(user, productId));
     }
 
-    // DELETE /api/v1/cart (Clear cart)
     @DeleteMapping
     public ResponseEntity<CartResponse> clear(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(cart.clear(user));
+        return ResponseEntity.ok(cartService.clear(user));
     }
 }
-

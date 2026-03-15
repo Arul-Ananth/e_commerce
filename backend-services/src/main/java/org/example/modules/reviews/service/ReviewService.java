@@ -1,37 +1,54 @@
 package org.example.modules.reviews.service;
 
 import org.example.modules.catalog.model.Product;
+import org.example.modules.catalog.service.ProductService;
+import org.example.modules.reviews.dto.request.AddReviewRequest;
+import org.example.modules.reviews.dto.response.ReviewResponse;
 import org.example.modules.reviews.model.Review;
-import org.example.modules.catalog.repository.ProductRepository;
 import org.example.modules.reviews.repository.ReviewRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 public class ReviewService {
 
-    private final ReviewRepository reviewRepo;
-    private final ProductRepository productRepo;
+    private final ReviewRepository reviewRepository;
+    private final ProductService productService;
 
-    public ReviewService(ReviewRepository reviewRepo, ProductRepository productRepo) {
-        this.reviewRepo = reviewRepo;
-        this.productRepo = productRepo;
+    public ReviewService(ReviewRepository reviewRepository, ProductService productService) {
+        this.reviewRepository = reviewRepository;
+        this.productService = productService;
     }
 
-    public List<Review> getReviewsByProductId(Long productId) {
-        return reviewRepo.findByProductId(productId);
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getReviewsByProductId(Long productId) {
+        return reviewRepository.findByProductId(productId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Review addReview(Long productId, Review review, String username) {
-        Product product = productRepo.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    @Transactional
+    public ReviewResponse addReview(Long productId, AddReviewRequest request, String username) {
+        Product product = productService.getProductEntityById(productId);
 
+        Review review = new Review();
         review.setProduct(product);
-        review.setUser(username); // Set the user from the logged-in token
-        return reviewRepo.save(review);
+        review.setUser(username);
+        review.setRating(request.rating());
+        review.setComment(request.comment());
+
+        return toResponse(reviewRepository.save(review));
+    }
+
+    private ReviewResponse toResponse(Review review) {
+        return new ReviewResponse(
+                review.getId(),
+                review.getUser(),
+                review.getComment(),
+                review.getRating(),
+                review.getProduct() != null ? review.getProduct().getId() : null
+        );
     }
 }
-

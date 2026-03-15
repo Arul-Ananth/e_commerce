@@ -20,6 +20,9 @@ public class JwtService {
 
     public JwtService(@Value("${app.jwt.secret}") String secret,
                       @Value("${app.jwt.expiration-ms}") long expirationMs) {
+        if (secret == null || secret.isBlank() || secret.length() < 32) {
+            throw new IllegalStateException("app.jwt.secret must be set and at least 32 characters long");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
     }
@@ -35,7 +38,7 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(String.valueOf(user.getId()))
                 .claim("email", user.getEmail())
-                .claim("roles", roles) // Add roles here
+                .claim("roles", roles)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -46,4 +49,3 @@ public class JwtService {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
     }
 }
-

@@ -36,7 +36,6 @@ public class AuthService {
     }
 
     public AuthResponse signup(SignupRequest req) {
-        // Validate Inputs
         if (req.email() == null || req.email().isBlank() ||
                 req.password() == null || req.password().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password are required");
@@ -45,30 +44,21 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
-        // Create User
         User user = new User();
         user.setEmail(req.email());
         user.setPassword(passwordEncoder.encode(req.password()));
+        user.setRealUsername(req.username() != null && !req.username().isBlank()
+                ? req.username()
+                : req.email().split("@")[0]);
 
-        // Save Username (if provided, otherwise fallback to email prefix or null)
-        if (req.username() != null && !req.username().isBlank()) {
-            user.setRealUsername(req.username());
-        } else {
-            user.setRealUsername(req.email().split("@")[0]);
-        }
-
-        // Assign Default Role
         Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error: Role 'ROLE_USER' is not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role 'ROLE_USER' is not found"));
 
         Set<Role> roles = new HashSet<>();
         roles.add(userRole);
         user.setRoles(roles);
 
-        // Save to DB
         user = userRepository.save(user);
-
-        // Generate Token & Response
         String token = jwtService.generateToken(user);
         return new AuthResponse(token, mapToDto(user));
     }
@@ -76,6 +66,8 @@ public class AuthService {
     public AuthResponse login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+
+        enforceAccountActive(user);
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
@@ -85,13 +77,34 @@ public class AuthService {
         return new AuthResponse(token, mapToDto(user));
     }
 
-    // Helper to convert Entity to DTO
-    private UserDto mapToDto(User user) {
-        List<String> roleNames = user.getRoles().stream()
-                .map(Role::getName)
-                .toList();
+    public AuthResponse registerManager(SignupRequest req) {
+        if (userRepository.existsByEmail(req.email())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
+        }
 
-        // Assuming your User entity uses getRealUsername() for the display name
+        User user = new User();
+        user.setEmail(req.email());
+        user.setPassword(passwordEncoder.encode(req.password()));
+        user.setRealUsername(req.username() != null ? req.username() : "Manager");
+
+        Role managerRole = roleRepository.findByName("ROLE_MANAGER")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role 'ROLE_MANAGER' is not found"));
+
+        user.setRoles(Set.of(managerRole));
+        user = userRepository.save(user);
+
+        String token = jwtService.generateToken(user);
+        return new AuthResponse(token, mapToDto(user));
+    }
+
+    private void enforceAccountActive(User user) {
+        if (!user.isEnabled() || !user.isAccountNonLocked()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is disabled or locked");
+        }
+    }
+
+    private UserDto mapToDto(User user) {
+        List<String> roleNames = user.getRoles().stream().map(Role::getName).toList();
         return new UserDto(
                 user.getId(),
                 user.getEmail(),
@@ -102,30 +115,4 @@ public class AuthService {
                 user.getUserDiscountEndDate()
         );
     }
-
-
-
-    public AuthResponse registerManager(SignupRequest req) {
-        // Reuse your signup logic but force the role
-        if (userRepository.existsByEmail(req.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
-        }
-
-        User user = new User();
-        user.setEmail(req.email());
-        user.setPassword(passwordEncoder.encode(req.password()));
-        user.setRealUsername(req.username() != null ? req.username() : "Manager");
-
-        // Assign ROLE_MANAGER
-        Role managerRole = roleRepository.findByName("ROLE_MANAGER")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error: Role 'ROLE_MANAGER' is not found."));
-
-        user.setRoles(Set.of(managerRole));
-        userRepository.save(user);
-
-        String token = jwtService.generateToken(user);
-        // Use the same helper method 'mapToDto' you already have
-        return new AuthResponse(token, mapToDto(user));
-    }
 }
-

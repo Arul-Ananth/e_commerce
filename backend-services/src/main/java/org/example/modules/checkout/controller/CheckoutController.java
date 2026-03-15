@@ -1,44 +1,32 @@
 package org.example.modules.checkout.controller;
 
-import org.example.modules.users.model.User;
 import org.example.modules.cart.service.CartService;
+import org.example.modules.checkout.dto.CheckoutResponse;
+import org.example.modules.users.model.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
-
 @RequestMapping("/api/v1/checkout")
-
 public class CheckoutController {
 
     private final CartService cartService;
 
-    // Inject CartService so we can empty the cart after purchase
     public CheckoutController(CartService cartService) {
         this.cartService = cartService;
     }
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map<String, Object>> checkout(@AuthenticationPrincipal User user) {
-
-        // Perform Purchase Logic (Payment Gateway would go here)
+    public ResponseEntity<CheckoutResponse> checkout(@AuthenticationPrincipal User user) {
         String orderId = UUID.randomUUID().toString();
-
-        //  Clear the User's Cart
         cartService.clear(user);
-
-        // Return Success Response
-        return ResponseEntity.ok(Map.of(
-                "orderId", orderId,
-                "status", "SUCCESS",
-                "message", "Order placed successfully!"
-        ));
+        return ResponseEntity.ok(new CheckoutResponse(orderId, "SUCCESS", "Order placed successfully!"));
     }
 }
-

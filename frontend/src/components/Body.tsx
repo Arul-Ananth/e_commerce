@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Toolbar } from '@mui/material'; // 👈 Import Toolbar
+import { Alert, Box, CircularProgress, Toolbar } from '@mui/material';
 import Sidebar from './Sidebar';
-
 import ProductGrid from './ProductGrid';
 import { fetchCategories, fetchProducts } from '../api/ApiService';
 
@@ -11,20 +10,45 @@ function Body({ drawerOpen, toggleDrawer }) {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [products, setProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+    const [productsError, setProductsError] = useState('');
 
     useEffect(() => {
-        fetchCategories().then(setCategories);
+        const loadCategories = async () => {
+            try {
+                const data = await fetchCategories();
+                setCategories(data);
+            } catch (err) {
+                console.error('Failed to load categories', err);
+                setCategories(['All']);
+            }
+        };
+        loadCategories();
     }, []);
 
     useEffect(() => {
-        fetchProducts(selectedCategory).then(setProducts);
+        const loadProducts = async () => {
+            setLoadingProducts(true);
+            setProductsError('');
+            try {
+                const data = await fetchProducts(selectedCategory);
+                setProducts(data);
+            } catch (err) {
+                console.error('Failed to load products', err);
+                setProducts([]);
+                setProductsError('Failed to load products. Please try again.');
+            } finally {
+                setLoadingProducts(false);
+            }
+        };
+        loadProducts();
     }, [selectedCategory]);
 
     return (
         <Box sx={{ display: 'flex' }}>
             <Sidebar
                 drawerOpen={drawerOpen}
-                toggleDrawer={toggleDrawer}   // pass toggler down
+                toggleDrawer={toggleDrawer}
                 categories={categories}
                 selectedCategory={selectedCategory}
                 setSelectedCategory={setSelectedCategory}
@@ -39,8 +63,15 @@ function Body({ drawerOpen, toggleDrawer }) {
                     transition: 'width 0.3s ease',
                 }}
             >
-                <Toolbar /> {/* 👈 This pushes content below the fixed AppBar */}
-                <ProductGrid products={products} />
+                <Toolbar />
+                {loadingProducts && <CircularProgress />}
+                {!loadingProducts && productsError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>{productsError}</Alert>
+                )}
+                {!loadingProducts && !productsError && products.length === 0 && (
+                    <Alert severity="info" sx={{ mb: 2 }}>No products available.</Alert>
+                )}
+                {!loadingProducts && !productsError && <ProductGrid products={products} />}
             </Box>
         </Box>
     );

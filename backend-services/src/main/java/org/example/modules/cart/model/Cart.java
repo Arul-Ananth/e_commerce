@@ -9,8 +9,12 @@ import java.util.List;
 @Entity
 @Table(name = "carts")
 public class Cart {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Version
+    private Long version;
 
     @OneToOne(optional = false)
     @JoinColumn(name = "user_id", unique = true)
@@ -19,14 +23,34 @@ public class Cart {
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartItem> items = new ArrayList<>();
 
-    public Cart() {}
-    public Cart(User user) { this.user = user; }
+    public Cart() {
+    }
 
-    public Long getId() { return id; }
+    public Cart(User user) {
+        this.user = user;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public Long getId() {
+        return id;
+    }
 
-    public List<CartItem> getItems() { return items; }
-    public void setItems(List<CartItem> items) { this.items = items; }
+    public Long getVersion() {
+        return version;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public List<CartItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<CartItem> items) {
+        this.items = items;
+    }
 }

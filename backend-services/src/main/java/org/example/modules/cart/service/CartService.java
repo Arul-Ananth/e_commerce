@@ -9,7 +9,7 @@ import org.example.modules.cart.repository.CartItemRepository;
 import org.example.modules.cart.repository.CartRepository;
 import org.example.modules.catalog.model.Discount;
 import org.example.modules.catalog.model.Product;
-import org.example.modules.catalog.repository.ProductRepository;
+import org.example.modules.catalog.service.ProductService;
 import org.example.modules.users.model.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -24,18 +25,19 @@ import java.util.List;
 @Service
 public class CartService {
 
-    private static final double EMPLOYEE_DISCOUNT_PERCENTAGE = 15.0;
+    private static final BigDecimal EMPLOYEE_DISCOUNT_PERCENTAGE = BigDecimal.valueOf(15);
+    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
+    private final ProductService productService;
 
     public CartService(CartRepository cartRepository,
                        CartItemRepository cartItemRepository,
-                       ProductRepository productRepository) {
+                       ProductService productService) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
-        this.productRepository = productRepository;
+        this.productService = productService;
     }
 
     private Cart getOrCreateCart(User user) {
@@ -53,9 +55,9 @@ public class CartService {
         if (quantity <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be > 0");
         }
+
         Cart cart = getOrCreateCart(user);
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        Product product = productService.getProductEntityById(productId);
 
         CartItem item = cartItemRepository.findByCartAndProduct(cart, product).orElse(null);
         if (item == null) {
@@ -65,11 +67,12 @@ public class CartService {
             item.setQuantity(quantity);
             item.setSelectedDiscount(resolveSelectedDiscount(product, discountId, true));
         } else {
-            item.setQuantity(item.getQuantity() + quantity); // increment
+            item.setQuantity(item.getQuantity() + quantity);
             if (discountId != null) {
                 item.setSelectedDiscount(resolveSelectedDiscount(product, discountId, false));
             }
         }
+
         cartItemRepository.save(item);
         return toResponse(cartRepository.findById(cart.getId()).orElse(cart));
     }
@@ -77,26 +80,25 @@ public class CartService {
     @Transactional
     public CartResponse setQuantity(User user, Long productId, int quantity) {
         Cart cart = getOrCreateCart(user);
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        Product product = productService.getProductEntityById(productId);
 
         CartItem item = cartItemRepository.findByCartAndProduct(cart, product)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
 
         if (quantity <= 0) {
-            cartItemRepository.delete(item); // remove if 0
+            cartItemRepository.delete(item);
         } else {
             item.setQuantity(quantity);
             cartItemRepository.save(item);
         }
+
         return toResponse(cartRepository.findById(cart.getId()).orElse(cart));
     }
 
     @Transactional
     public CartResponse removeItem(User user, Long productId) {
         Cart cart = getOrCreateCart(user);
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        Product product = productService.getProductEntityById(productId);
         cartItemRepository.deleteByCartAndProduct(cart, product);
         return toResponse(cartRepository.findById(cart.getId()).orElse(cart));
     }
@@ -111,10 +113,10 @@ public class CartService {
         return new CartResponse(List.of());
     }
 
+    @Transactional
     public CartResponse updateItemDiscount(User user, Long productId, Long discountId) {
         Cart cart = getOrCreateCart(user);
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        Product product = productService.getProductEntityById(productId);
 
         CartItem item = cartItemRepository.findByCartAndProduct(cart, product)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
@@ -126,36 +128,59 @@ public class CartService {
 
     private CartResponse toResponse(Cart cart) {
         List<CartItemDto> items = cart.getItems().stream()
-                .map(ci -> {
-                    Discount activeSelected = getActiveSelectedDiscount(ci.getSelectedDiscount());
-                    double productDiscountPercentage = activeSelected != null ? activeSelected.getPercentage() : 0.0;
-                    double userDiscountPercentage = getActiveUserDiscountPercentage(ci.getCart().getUser());
-                    double employeeDiscountPercentage = isEmployee(ci.getCart().getUser())
-                            ? EMPLOYEE_DISCOUNT_PERCENTAGE
-                            : 0.0;
-                    double totalDiscountPercentage = Math.min(
-                            100.0,
-                            productDiscountPercentage + userDiscountPercentage + employeeDiscountPercentage
-                    );
-                    BigDecimal basePrice = BigDecimal.valueOf(ci.getProduct().getPrice());
-                    BigDecimal finalPrice = basePrice.multiply(
-                            BigDecimal.valueOf(1 - (totalDiscountPercentage / 100.0))
-                    );
-                    return new CartItemDto(
-                            ci.getProduct().getId(),
-                            ci.getProduct().getName(),
-                            basePrice,
-                            finalPrice,
-                            ci.getProduct().getImages().getFirst(),
-                            ci.getQuantity(),
-                            mapDiscount(activeSelected),
-                            userDiscountPercentage,
-                            employeeDiscountPercentage,
-                            totalDiscountPercentage
-                    );
-                })
+                .map(this::toCartItemDto)
                 .toList();
         return new CartResponse(items);
+    }
+
+    private CartItemDto toCartItemDto(CartItem item) {
+        Discount activeSelected = getActiveSelectedDiscount(item.getSelectedDiscount());
+        BigDecimal productDiscountPercentage = activeSelected != null ? activeSelected.getPercentage() : BigDecimal.ZERO;
+        BigDecimal userDiscountPercentage = getActiveUserDiscountPercentage(item.getCart().getUser());
+        BigDecimal employeeDiscountPercentage = isEmployee(item.getCart().getUser())
+                ? EMPLOYEE_DISCOUNT_PERCENTAGE
+                : BigDecimal.ZERO;
+        BigDecimal totalDiscountPercentage = calculateTotalDiscountPercentage(
+                productDiscountPercentage,
+                userDiscountPercentage,
+                employeeDiscountPercentage
+        );
+
+        BigDecimal basePrice = item.getProduct().getPrice();
+        BigDecimal finalPrice = calculateFinalPrice(basePrice, totalDiscountPercentage);
+
+        return new CartItemDto(
+                item.getProduct().getId(),
+                item.getProduct().getName(),
+                basePrice,
+                finalPrice,
+                primaryImage(item.getProduct()),
+                item.getQuantity(),
+                mapDiscount(activeSelected),
+                userDiscountPercentage,
+                employeeDiscountPercentage,
+                totalDiscountPercentage
+        );
+    }
+
+    private String primaryImage(Product product) {
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            return null;
+        }
+        return product.getImages().getFirst();
+    }
+
+    private BigDecimal calculateTotalDiscountPercentage(BigDecimal productDiscount,
+                                                        BigDecimal userDiscount,
+                                                        BigDecimal employeeDiscount) {
+        // Discounts are additive by policy but can never exceed 100%.
+        BigDecimal combined = productDiscount.add(userDiscount).add(employeeDiscount);
+        return combined.min(ONE_HUNDRED).max(BigDecimal.ZERO);
+    }
+
+    private BigDecimal calculateFinalPrice(BigDecimal basePrice, BigDecimal totalDiscountPercentage) {
+        BigDecimal multiplier = BigDecimal.ONE.subtract(totalDiscountPercentage.divide(ONE_HUNDRED, 4, RoundingMode.HALF_UP));
+        return basePrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
     }
 
     private Discount resolveSelectedDiscount(Product product, Long discountId, boolean applyBestIfMissing) {
@@ -201,19 +226,21 @@ public class CartService {
         return user.getRoles().stream().anyMatch(role -> "ROLE_EMPLOYEE".equals(role.getName()));
     }
 
-    private double getActiveUserDiscountPercentage(User user) {
-        Double percentage = user.getUserDiscountPercentage();
-        if (percentage == null || percentage <= 0) {
-            return 0.0;
+    private BigDecimal getActiveUserDiscountPercentage(User user) {
+        BigDecimal percentage = user.getUserDiscountPercentage();
+        if (percentage == null || percentage.signum() <= 0) {
+            return BigDecimal.ZERO;
         }
+
         LocalDate today = LocalDate.now();
         LocalDate start = user.getUserDiscountStartDate();
         LocalDate end = user.getUserDiscountEndDate();
+
         if (start == null || start.isAfter(today)) {
-            return 0.0;
+            return BigDecimal.ZERO;
         }
         if (end != null && end.isBefore(today)) {
-            return 0.0;
+            return BigDecimal.ZERO;
         }
         return percentage;
     }
@@ -230,7 +257,4 @@ public class CartService {
                 discount.getEndDate()
         );
     }
-
-
 }
-

@@ -10,7 +10,8 @@ import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class ProductControllerIT extends IntegrationTestBase {
 
@@ -23,19 +24,19 @@ public class ProductControllerIT extends IntegrationTestBase {
 
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
+                .andExpect(jsonPath("$.items", hasSize(greaterThanOrEqualTo(1))));
 
         mockMvc.perform(get("/api/v1/products/{id}", product.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name", is("Laptop")));
 
-        mockMvc.perform(get("/api/v1/categories"))
+        mockMvc.perform(get("/api/v1/products/categories"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasItem("Electronics")));
 
-        mockMvc.perform(get("/api/v1/products/category/{name}", "Electronics"))
+        mockMvc.perform(get("/api/v1/products").param("category", "Electronics"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
+                .andExpect(jsonPath("$.items", hasSize(greaterThanOrEqualTo(1))));
     }
 
     @Test

@@ -24,7 +24,7 @@ const authApi = axios.create({
 
 export async function fetchCategories() {
     try {
-        const res = await fetch(`${API_PREFIX}/categories`);
+        const res = await fetch(`${API_PREFIX}/products/categories`);
         if (!res.ok) throw new Error("Failed to fetch categories");
         if (!res.headers.get("content-type")?.includes("application/json")) {
             throw new Error("Categories endpoint returned non-JSON response");
@@ -34,26 +34,28 @@ export async function fetchCategories() {
         return ['All', ...data];
     } catch (err) {
         console.error('Error fetching categories:', err);
-        return ['All']; // Fallback
+        throw err;
     }
 }
 
 export async function fetchProducts(category) {
     try {
-        // New Endpoint Logic
-        const url = category === 'All' || !category
-            ? `${API_PREFIX}/products`
-            : `${API_PREFIX}/products/category/${category}`;
+        const params = new URLSearchParams({ page: "0", size: "100" });
+        if (category && category !== "All") {
+            params.set("category", category);
+        }
+        const url = `${API_PREFIX}/products?${params.toString()}`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error("Failed to fetch products");
         if (!res.headers.get("content-type")?.includes("application/json")) {
             throw new Error("Products endpoint returned non-JSON response");
         }
-        return await res.json();
+        const data = await res.json();
+        return Array.isArray(data?.items) ? data.items : [];
     } catch (err) {
         console.error('Error fetching products:', err);
-        return [];
+        throw err;
     }
 }
 
@@ -184,8 +186,8 @@ export async function addReview(productId, reviewData) {
 
 
 export async function getAllUsers() {
-    const { data } = await api.get("/users");
-    return data;
+    const { data } = await api.get("/users", { params: { page: 0, size: 200 } });
+    return data?.items ?? [];
 }
 
 export async function flagUser(userId) {

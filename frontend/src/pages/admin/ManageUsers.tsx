@@ -32,16 +32,9 @@ export default function ManageUsers() {
             const data = await getAllUsers();
             const safeData = Array.isArray(data) ? data : [];
 
-            // --- SORTING LOGIC ---
-            // Flagged users (true) come before Active users (false)
             safeData.sort((a, b) => {
-                // Check both property names in case JSON format varies
-                const aFlagged = a.isFlagged || a.flagged || false;
-                const bFlagged = b.isFlagged || b.flagged || false;
-
-                // If 'a' is flagged and 'b' is not, 'a' moves up (-1)
-                // If 'b' is flagged and 'a' is not, 'b' moves up (1)
-                // If both are same, don't move (0)
+                const aFlagged = a.flagged || false;
+                const bFlagged = b.flagged || false;
                 return (aFlagged === bFlagged) ? 0 : aFlagged ? -1 : 1;
             });
 
@@ -61,10 +54,9 @@ export default function ManageUsers() {
             const data = await getAllUsers();
             const safeData = Array.isArray(data) ? data : [];
 
-            // Apply the same sort on refresh
             safeData.sort((a, b) => {
-                const aFlagged = a.isFlagged || a.flagged || false;
-                const bFlagged = b.isFlagged || b.flagged || false;
+                const aFlagged = a.flagged || false;
+                const bFlagged = b.flagged || false;
                 return (aFlagged === bFlagged) ? 0 : aFlagged ? -1 : 1;
             });
 
@@ -162,11 +154,7 @@ export default function ManageUsers() {
         }
     };
 
-    const getRoleNames = (roles) => (
-        Array.isArray(roles)
-            ? roles.map(r => (typeof r === 'string' ? r : r.name))
-            : []
-    );
+    const getRoleNames = (roles) => Array.isArray(roles) ? roles : [];
 
     if (loading) return <Box p={4}><CircularProgress /></Box>;
     if (error) return <Box p={4}><Alert severity="error">{error}</Alert></Box>;
@@ -192,8 +180,7 @@ export default function ManageUsers() {
                     </TableHead>
                     <TableBody>
                         {users.map((u) => {
-                            // Determine flag status for rendering
-                            const isUserFlagged = u.isFlagged || u.flagged;
+                            const isUserFlagged = u.flagged;
                             const roleNames = getRoleNames(u.roles);
                             const isEmployee = roleNames.includes('ROLE_EMPLOYEE');
                             const discountValue = discountEdits[u.id] ?? (u.userDiscountPercentage ?? 0);
@@ -204,7 +191,7 @@ export default function ManageUsers() {
                                 <TableRow key={u.id} sx={{ backgroundColor: isUserFlagged ? '#d32f2f' : 'inherit' }}>
                                     <TableCell>{u.id}</TableCell>
                                     <TableCell>{u.email}</TableCell>
-                                    <TableCell>{u.realUsername || u.username || 'N/A'}</TableCell>
+                                    <TableCell>{u.username || 'N/A'}</TableCell>
                                     <TableCell>
                                         {isUserFlagged ? (
                                             <Chip icon={<FlagIcon />} label="Flagged" color="error" size="small" />

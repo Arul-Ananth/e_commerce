@@ -13,13 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -49,6 +50,7 @@ public abstract class IntegrationTestBase {
         registry.add("app.media.upload-dir", () -> UPLOAD_DIR);
         registry.add("app.media.resource-location", () -> RESOURCE_LOCATION);
         registry.add("app.media.public-base-url", () -> "http://localhost:8080/images/");
+        registry.add("app.media.max-upload-bytes", () -> "5242880");
     }
 
     @Autowired
@@ -94,8 +96,9 @@ public abstract class IntegrationTestBase {
         product.setName(name);
         product.setDescription("Test description");
         product.setCategory(category);
-        product.setPrice(price);
+        product.setPrice(BigDecimal.valueOf(price));
         product.setImages(List.of("http://example.com/img.png"));
         return productRepository.save(product);
     }
 }
+

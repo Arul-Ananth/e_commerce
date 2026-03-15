@@ -1,6 +1,9 @@
 package org.example.modules.catalog.controller;
 
-import org.example.modules.catalog.model.Product;
+import jakarta.validation.Valid;
+import org.example.common.dto.PageResponse;
+import org.example.modules.catalog.dto.request.ProductUpsertRequest;
+import org.example.modules.catalog.dto.response.ProductResponse;
 import org.example.modules.catalog.service.ProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -8,57 +11,48 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1")
-
+@RequestMapping("/api/v1/products")
 public class ProductController {
 
-    private final ProductService service;
+    private final ProductService productService;
 
-    public ProductController(ProductService service) {
-        this.service = service;
+    public ProductController(ProductService productService) {
+        this.productService = productService;
     }
 
-    // GET /api/v1/products
-    @GetMapping("/products")
-    public List<Product> getAllProducts() {
-        return service.getAllProducts();
+    @GetMapping
+    public PageResponse<ProductResponse> getProducts(
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        return PageResponse.from(productService.getProducts(category, page, size), item -> item);
     }
 
-    // GET /api/v1/products/{id}
-    @GetMapping("/products/{id}")
-    public ResponseEntity<Product> getProduct(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(service.getProductById(id));
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductResponse> getProduct(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(productService.getProductById(id));
     }
 
-    // GET /api/v1/categories
     @GetMapping("/categories")
     public List<String> getCategories() {
-        return service.getAllCategories();
+        return productService.getAllCategories();
     }
 
-    // GET /api/v1/products?category=Electronics (Optional filter style)
-    // or GET /api/v1/products/category/{name}
-    @GetMapping("/products/category/{categoryName}")
-    public List<Product> getByCategory(@PathVariable("categoryName") String categoryName) {
-        return service.getProductsByCategory(categoryName);
+    @PostMapping
+    public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductUpsertRequest request) {
+        return ResponseEntity.status(201).body(productService.createProduct(request));
     }
 
-    // --- Admin Endpoints ---
-
-    @PostMapping("/products")
-    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-        return ResponseEntity.status(201).body(service.createProduct(product));
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponse> updateProduct(@PathVariable("id") Long id,
+                                                         @Valid @RequestBody ProductUpsertRequest request) {
+        return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
-    @PutMapping("/products/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable("id") Long id, @RequestBody Product product) {
-        return ResponseEntity.ok(service.updateProduct(id, product));
-    }
-
-    @DeleteMapping("/products/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable("id") Long id) {
-        service.deleteProduct(id);
+        productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
     }
 }
-

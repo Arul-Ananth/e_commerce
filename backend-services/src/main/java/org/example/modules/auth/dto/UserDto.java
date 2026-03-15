@@ -1,5 +1,6 @@
 package org.example.modules.auth.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -8,7 +9,8 @@ public record UserDto(
         String email,
         String username,
         List<String> roles,
-        Double userDiscountPercentage,
+        BigDecimal userDiscountPercentage,
         LocalDate userDiscountStartDate,
         LocalDate userDiscountEndDate
-) {}
+) {
+}
