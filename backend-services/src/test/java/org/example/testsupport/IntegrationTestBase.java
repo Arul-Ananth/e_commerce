@@ -78,7 +78,7 @@ public abstract class IntegrationTestBase {
         User user = new User();
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setRealUsername(email.split("@")[0]);
+        user.setDisplayName(email.split("@")[0]);
         Set<Role> roleSet = new java.util.HashSet<>();
         for (String role : roles) {
             roleSet.add(ensureRole(role));

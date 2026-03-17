@@ -1,26 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-    Box,
-    Typography,
-    Paper,
-    Grid,
-    Button,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Stack,
-    Alert,
-    CircularProgress
-} from "@mui/material";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Box, Typography, Paper, Grid, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Stack, Alert, CircularProgress } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { fetchProducts, deleteProduct } from "../../api/ApiService";
+import { fetchProducts, deleteProduct, extractApiErrorMessage } from "../../api/ApiService";
+import type { Product } from "../../types/models";
+
+const currency = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
+
+interface ProductRow {
+    id: number;
+    name: string;
+    price: number;
+    shortDescription: string;
+}
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -33,35 +28,38 @@ export default function AdminDashboard() {
                 setProducts(Array.isArray(data) ? data : []);
             } catch (err) {
                 console.error("Failed to load products", err);
-                setError("Failed to load products.");
+                setError(extractApiErrorMessage(err, "Failed to load products."));
             } finally {
                 setLoading(false);
             }
         };
 
-        load();
+        load().catch((e: unknown) => console.error("Product load error", e));
     }, []);
 
-    const handleRemove = async (id) => {
-        if (!window.confirm("Remove this product? This cannot be undone.")) return;
+    const handleRemove = async (id: number) => {
+        if (!window.confirm("Remove this product? This cannot be undone.")) {
+            return;
+        }
+
         try {
             await deleteProduct(id);
             setProducts((prev) => prev.filter((p) => p.id !== id));
         } catch (err) {
             console.error("Failed to delete product", err);
-            alert("Failed to remove product.");
+            alert(extractApiErrorMessage(err, "Failed to remove product."));
         }
     };
 
-    const rows = useMemo(() => {
+    const rows = useMemo<ProductRow[]>(() => {
         return products.map((p) => {
             const raw = p.description || "";
             const shortDescription = raw.length > 140 ? `${raw.slice(0, 140)}...` : raw;
             return {
                 id: p.id,
                 name: p.name || "Untitled",
-                price: p.price ?? "-",
-                shortDescription
+                price: Number(p.price) || 0,
+                shortDescription,
             };
         });
     }, [products]);
@@ -77,32 +75,14 @@ export default function AdminDashboard() {
                 </Typography>
 
                 <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            onClick={() => navigate("/admin/add-product")}
-                        >
-                            Add Product
-                        </Button>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button fullWidth variant="contained" onClick={() => navigate("/admin/add-product")}>Add Product</Button>
                     </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            onClick={() => navigate("/admin/add-manager")}
-                        >
-                            Add Manager
-                        </Button>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button fullWidth variant="contained" onClick={() => navigate("/admin/add-manager")}>Add Manager</Button>
                     </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            onClick={() => navigate("/admin/users")}
-                        >
-                            Manage Users
-                        </Button>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button fullWidth variant="contained" onClick={() => navigate("/admin/users")}>Manage Users</Button>
                     </Grid>
                 </Grid>
 
@@ -117,9 +97,7 @@ export default function AdminDashboard() {
                         </Stack>
                     )}
                     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-                    {!loading && !error && rows.length === 0 && (
-                        <Alert severity="info">No products found.</Alert>
-                    )}
+                    {!loading && !error && rows.length === 0 && <Alert severity="info">No products found.</Alert>}
 
                     {!loading && !error && rows.length > 0 && (
                         <TableContainer component={Paper} variant="outlined">
@@ -136,14 +114,10 @@ export default function AdminDashboard() {
                                     {rows.map((row) => (
                                         <TableRow key={row.id}>
                                             <TableCell>{row.name}</TableCell>
-                                            <TableCell>ƒ,1{row.price}</TableCell>
+                                            <TableCell>{currency.format(row.price)}</TableCell>
                                             <TableCell>{row.shortDescription}</TableCell>
                                             <TableCell align="right">
-                                                <Button
-                                                    color="error"
-                                                    variant="outlined"
-                                                    onClick={() => handleRemove(row.id)}
-                                                >
+                                                <Button color="error" variant="outlined" onClick={() => handleRemove(row.id)}>
                                                     Remove
                                                 </Button>
                                             </TableCell>

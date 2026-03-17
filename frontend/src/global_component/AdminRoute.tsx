@@ -1,22 +1,5 @@
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import RoleRoute from "./RoleRoute";
 
-const AdminRoute = () => {
-    const { isAuthenticated, user } = useAuth();
-
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }
-
-    // Fixed: Added optional chaining (?.)
-    const isAdmin = user?.roles?.includes('ROLE_ADMIN');
-
-    if (!isAdmin) {
-        return <Navigate to="/" replace />;
-    }
-
-    return <Outlet />;
-};
-
-export default AdminRoute;
+export default function AdminRoute() {
+    return <RoleRoute allowedRoles={["ROLE_ADMIN"]} />;
+}

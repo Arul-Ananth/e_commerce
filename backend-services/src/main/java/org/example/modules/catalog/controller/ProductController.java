@@ -1,16 +1,21 @@
 package org.example.modules.catalog.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.example.common.dto.PageResponse;
 import org.example.modules.catalog.dto.request.ProductUpsertRequest;
+import org.example.modules.catalog.dto.response.ProductListItemResponse;
 import org.example.modules.catalog.dto.response.ProductResponse;
 import org.example.modules.catalog.service.ProductService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/products")
 public class ProductController {
 
@@ -21,10 +26,10 @@ public class ProductController {
     }
 
     @GetMapping
-    public PageResponse<ProductResponse> getProducts(
+    public PageResponse<ProductListItemResponse> getProducts(
             @RequestParam(name = "category", required = false) String category,
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size
+            @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+            @RequestParam(name = "size", defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         return PageResponse.from(productService.getProducts(category, page, size), item -> item);
     }

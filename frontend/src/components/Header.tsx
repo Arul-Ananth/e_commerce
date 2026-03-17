@@ -1,50 +1,47 @@
-import React from "react";
-import { AppBar, Toolbar, Typography, Button, IconButton, Badge, Box } from "@mui/material";
+﻿import { AppBar, Toolbar, Typography, Button, IconButton, Badge, Box } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../global_component/CartContext";
 import { useAuth } from "../global_component/AuthContext";
 
-export default function Header({ onMenuClick }) {
+interface HeaderProps {
+    onMenuClick: (nextState?: boolean) => void;
+}
+
+export default function Header({ onMenuClick }: HeaderProps) {
     const navigate = useNavigate();
     const { cartCount } = useCart();
-    const { isAuthenticated, logout, user } = useAuth(); // Destructure 'user'
+    const { isAuthenticated, logout, user } = useAuth();
 
     const handleLoginLogout = () => {
         if (isAuthenticated) {
             logout();
             navigate("/");
-        } else {
-            navigate("/login");
+            return;
         }
+        navigate("/login");
     };
 
     return (
         <AppBar position="static">
             <Toolbar>
-                <IconButton color="inherit" edge="start" sx={{ mr: 1 }} onClick={onMenuClick}>
+                <IconButton color="inherit" edge="start" sx={{ mr: 1 }} onClick={() => onMenuClick()}>
                     <MenuIcon />
                 </IconButton>
 
-                <Typography
-                    variant="h6"
-                    sx={{ flexGrow: 1, cursor: "pointer" }}
-                    onClick={() => navigate("/")}
-                >
+                <Typography variant="h6" sx={{ flexGrow: 1, cursor: "pointer" }} onClick={() => navigate("/")}>
                     E-Commerce
                 </Typography>
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-
-                    {/* Show Hello Username if logged in */}
                     {isAuthenticated && user && (
-                        <Typography variant="body2" sx={{ mr: 1, display: { xs: 'none', sm: 'block' } }}>
+                        <Typography variant="body2" sx={{ mr: 1, display: { xs: "none", sm: "block" } }}>
                             Hello, {user.username || user.email}
                         </Typography>
                     )}
 
-                    <IconButton color="inherit" onClick={() => navigate("/cart")}>
+                    <IconButton color="inherit" onClick={() => navigate("/checkout")}>
                         <Badge badgeContent={cartCount} color="error">
                             <ShoppingCartIcon />
                         </Badge>

@@ -2,6 +2,7 @@ package org.example.modules.catalog.service;
 
 import org.example.modules.catalog.dto.request.ProductUpsertRequest;
 import org.example.modules.catalog.dto.response.DiscountResponse;
+import org.example.modules.catalog.dto.response.ProductListItemResponse;
 import org.example.modules.catalog.dto.response.ProductResponse;
 import org.example.modules.catalog.model.Product;
 import org.example.modules.catalog.repository.ProductRepository;
@@ -26,22 +27,22 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductResponse> getProducts(String category, int page, int size) {
+    public Page<ProductListItemResponse> getProducts(String category, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "id"));
         Page<Product> products = (category == null || category.isBlank())
-                ? productRepository.findAll(pageable)
-                : productRepository.findByCategory(category, pageable);
-        return products.map(this::toResponse);
+                ? productRepository.findPageWithImages(pageable)
+                : productRepository.findPageWithImagesByCategory(category, pageable);
+        return products.map(this::toListItemResponse);
     }
 
     @Transactional(readOnly = true)
     public ProductResponse getProductById(Long id) {
-        return toResponse(getProductEntityById(id));
+        return toDetailResponse(getProductEntityById(id));
     }
 
     @Transactional(readOnly = true)
     public Product getProductEntityById(Long id) {
-        return productRepository.findById(id)
+        return productRepository.findDetailedById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     }
 
@@ -54,14 +55,14 @@ public class ProductService {
     public ProductResponse createProduct(ProductUpsertRequest request) {
         Product product = new Product();
         applyUpsertRequest(product, request);
-        return toResponse(productRepository.save(product));
+        return toDetailResponse(productRepository.save(product));
     }
 
     @Transactional
     public ProductResponse updateProduct(Long id, ProductUpsertRequest request) {
         Product existing = getProductEntityById(id);
         applyUpsertRequest(existing, request);
-        return toResponse(productRepository.save(existing));
+        return toDetailResponse(productRepository.save(existing));
     }
 
     @Transactional
@@ -80,7 +81,18 @@ public class ProductService {
         product.setImages(request.images());
     }
 
-    public ProductResponse toResponse(Product product) {
+    public ProductListItemResponse toListItemResponse(Product product) {
+        return new ProductListItemResponse(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getCategory(),
+                product.getPrice(),
+                product.getImages()
+        );
+    }
+
+    public ProductResponse toDetailResponse(Product product) {
         return new ProductResponse(
                 product.getId(),
                 product.getName(),

@@ -27,7 +27,7 @@ Date: 2026-03-15
 - Product loading now shows explicit loading/error/empty states.
 
 ## Operational Notes
-- Flyway integration was removed for now per current project direction.
+- Versioned migration tooling is intentionally disabled for now per current project direction.
 - Current DB lifecycle uses JPA runtime schema update mode.
 
 ## Validation

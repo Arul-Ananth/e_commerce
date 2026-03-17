@@ -1,115 +1,106 @@
-import React, { useEffect, useState } from 'react';
-import {
-    Box, Typography, Paper, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, Button, Chip, CircularProgress, Alert, TextField
-} from '@mui/material';
-import FlagIcon from '@mui/icons-material/Flag';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { getAllUsers, deleteUser, flagUser, unflagUser, updateUserDiscount, setEmployeeRole } from '../../api/ApiService';
-import { useAuth } from '../../global_component/AuthContext';
+﻿import { useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, CircularProgress, Alert, TextField } from "@mui/material";
+import FlagIcon from "@mui/icons-material/Flag";
+import DeleteIcon from "@mui/icons-material/Delete";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { getAllUsers, deleteUser, flagUser, unflagUser, updateUserDiscount, setEmployeeRole, extractApiErrorMessage } from "../../api/ApiService";
+import { useAuth } from "../../global_component/AuthContext";
+import { hasRole } from "../../global_component/authUtils";
+import type { User } from "../../types/models";
+
+type EditMap = Record<number, string>;
+
+function sortFlaggedFirst(data: User[]): User[] {
+    return [...data].sort((a, b) => {
+        const aFlagged = a.flagged || false;
+        const bFlagged = b.flagged || false;
+        return aFlagged === bFlagged ? 0 : aFlagged ? -1 : 1;
+    });
+}
 
 export default function ManageUsers() {
-    const [users, setUsers] = useState([]);
-    const [discountEdits, setDiscountEdits] = useState({});
-    const [discountStartEdits, setDiscountStartEdits] = useState({});
-    const [discountEndEdits, setDiscountEndEdits] = useState({});
+    const [users, setUsers] = useState<User[]>([]);
+    const [discountEdits, setDiscountEdits] = useState<EditMap>({});
+    const [discountStartEdits, setDiscountStartEdits] = useState<EditMap>({});
+    const [discountEndEdits, setDiscountEndEdits] = useState<EditMap>({});
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
     const { user: currentUser } = useAuth();
 
-    // Safety check: Optional chaining
-    const isAdmin = currentUser?.roles?.includes('ROLE_ADMIN');
-    const isManager = currentUser?.roles?.includes('ROLE_MANAGER');
+    const isAdmin = hasRole(currentUser, "ROLE_ADMIN");
+    const isManager = hasRole(currentUser, "ROLE_MANAGER");
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
-
-    const loadUsers = async () => {
+    const loadUsers = async ({ resetEdits, surfaceError }: { resetEdits: boolean; surfaceError: boolean }) => {
         setLoading(true);
         try {
             const data = await getAllUsers();
-            const safeData = Array.isArray(data) ? data : [];
-
-            safeData.sort((a, b) => {
-                const aFlagged = a.flagged || false;
-                const bFlagged = b.flagged || false;
-                return (aFlagged === bFlagged) ? 0 : aFlagged ? -1 : 1;
-            });
-
-            setUsers(safeData);
-            setError(null);
+            setUsers(sortFlaggedFirst(Array.isArray(data) ? data : []));
+            if (resetEdits) {
+                setDiscountEdits({});
+                setDiscountStartEdits({});
+                setDiscountEndEdits({});
+            }
+            if (surfaceError) {
+                setError(null);
+            }
         } catch (err) {
             console.error("Failed to load users", err);
-            setError("Failed to fetch user list.");
+            if (surfaceError) {
+                setError(extractApiErrorMessage(err, "Failed to fetch user list."));
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    // Helper to refresh list silently (without full loading spinner)
-    const refreshList = async () => {
-        try {
-            const data = await getAllUsers();
-            const safeData = Array.isArray(data) ? data : [];
+    useEffect(() => {
+        loadUsers({ resetEdits: false, surfaceError: true }).catch((e: unknown) => console.error("Load users failed", e));
+    }, []);
 
-            safeData.sort((a, b) => {
-                const aFlagged = a.flagged || false;
-                const bFlagged = b.flagged || false;
-                return (aFlagged === bFlagged) ? 0 : aFlagged ? -1 : 1;
-            });
-
-            setUsers(safeData);
-            setDiscountEdits({});
-            setDiscountStartEdits({});
-            setDiscountEndEdits({});
-        } catch (error) {
-            console.error("Silent refresh failed", error);
+    const handleDelete = async (id: number) => {
+        if (!window.confirm("Are you sure? This deletes the user permanently.")) {
+            return;
         }
-    }
-
-    const handleDelete = async (id) => {
-        if(!window.confirm("Are you sure? This deletes the user permanently.")) return;
         try {
             await deleteUser(id);
-            await refreshList();
+            await loadUsers({ resetEdits: true, surfaceError: false });
         } catch (err) {
-            alert("Failed to delete user.");
+            alert(extractApiErrorMessage(err, "Failed to delete user."));
         }
     };
 
-    const handleFlag = async (id) => {
+    const handleFlag = async (id: number) => {
         try {
             await flagUser(id);
-            await refreshList();
+            await loadUsers({ resetEdits: true, surfaceError: false });
         } catch (err) {
-            alert("Failed to flag user.");
+            alert(extractApiErrorMessage(err, "Failed to flag user."));
         }
     };
 
-    const handleUnflag = async (id) => {
+    const handleUnflag = async (id: number) => {
         try {
             await unflagUser(id);
-            await refreshList();
+            await loadUsers({ resetEdits: true, surfaceError: false });
         } catch (err) {
-            alert("Failed to unflag user.");
+            alert(extractApiErrorMessage(err, "Failed to unflag user."));
         }
     };
 
-    const handleDiscountChange = (id, value) => {
+    const handleDiscountChange = (id: number, value: string) => {
         setDiscountEdits((prev) => ({ ...prev, [id]: value }));
     };
 
-    const handleDiscountStartChange = (id, value) => {
+    const handleDiscountStartChange = (id: number, value: string) => {
         setDiscountStartEdits((prev) => ({ ...prev, [id]: value }));
     };
 
-    const handleDiscountEndChange = (id, value) => {
+    const handleDiscountEndChange = (id: number, value: string) => {
         setDiscountEndEdits((prev) => ({ ...prev, [id]: value }));
     };
 
-    const handleDiscountSave = async (id) => {
+    const handleDiscountSave = async (id: number) => {
         const rawValue = discountEdits[id];
         const percentage = rawValue === "" || rawValue === undefined ? 0 : Number(rawValue);
         if (Number.isNaN(percentage) || percentage < 0 || percentage > 100) {
@@ -139,25 +130,30 @@ export default function ManageUsers() {
                 delete next[id];
                 return next;
             });
-            await refreshList();
+            await loadUsers({ resetEdits: true, surfaceError: false });
         } catch (err) {
-            alert("Failed to update discount.");
+            alert(extractApiErrorMessage(err, "Failed to update discount."));
         }
     };
 
-    const handleEmployeeToggle = async (id, enabled) => {
+    const handleEmployeeToggle = async (id: number, enabled: boolean) => {
         try {
             await setEmployeeRole(id, enabled);
-            await refreshList();
+            await loadUsers({ resetEdits: true, surfaceError: false });
         } catch (err) {
-            alert("Failed to update employee role.");
+            alert(extractApiErrorMessage(err, "Failed to update employee role."));
         }
     };
 
-    const getRoleNames = (roles) => Array.isArray(roles) ? roles : [];
+    const getRoleNames = (roles?: string[]) => (Array.isArray(roles) ? roles : []);
 
-    if (loading) return <Box p={4}><CircularProgress /></Box>;
-    if (error) return <Box p={4}><Alert severity="error">{error}</Alert></Box>;
+    if (loading) {
+        return <Box p={4}><CircularProgress /></Box>;
+    }
+
+    if (error) {
+        return <Box p={4}><Alert severity="error">{error}</Alert></Box>;
+    }
 
     return (
         <Box sx={{ p: 4 }}>
@@ -180,18 +176,18 @@ export default function ManageUsers() {
                     </TableHead>
                     <TableBody>
                         {users.map((u) => {
-                            const isUserFlagged = u.flagged;
+                            const isUserFlagged = Boolean(u.flagged);
                             const roleNames = getRoleNames(u.roles);
-                            const isEmployee = roleNames.includes('ROLE_EMPLOYEE');
-                            const discountValue = discountEdits[u.id] ?? (u.userDiscountPercentage ?? 0);
+                            const isEmployee = roleNames.includes("ROLE_EMPLOYEE");
+                            const discountValue = discountEdits[u.id] ?? String(u.userDiscountPercentage ?? 0);
                             const discountStartValue = discountStartEdits[u.id] ?? (u.userDiscountStartDate ?? "");
                             const discountEndValue = discountEndEdits[u.id] ?? (u.userDiscountEndDate ?? "");
 
                             return (
-                                <TableRow key={u.id} sx={{ backgroundColor: isUserFlagged ? '#d32f2f' : 'inherit' }}>
+                                <TableRow key={u.id} sx={{ backgroundColor: isUserFlagged ? "#d32f2f" : "inherit" }}>
                                     <TableCell>{u.id}</TableCell>
                                     <TableCell>{u.email}</TableCell>
-                                    <TableCell>{u.username || 'N/A'}</TableCell>
+                                    <TableCell>{u.username || "N/A"}</TableCell>
                                     <TableCell>
                                         {isUserFlagged ? (
                                             <Chip icon={<FlagIcon />} label="Flagged" color="error" size="small" />
@@ -199,16 +195,14 @@ export default function ManageUsers() {
                                             <Chip label="Active" color="success" size="small" />
                                         )}
                                     </TableCell>
+                                    <TableCell>{roleNames.length ? roleNames.join(", ") : "No Role"}</TableCell>
                                     <TableCell>
-                                        {roleNames.length ? roleNames.join(", ") : "No Role"}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                             <TextField
                                                 size="small"
                                                 type="number"
                                                 value={discountValue}
-                                                onChange={(e) => handleDiscountChange(u.id, e.target.value)}
+                                                onChange={(e: ChangeEvent<HTMLInputElement>) => handleDiscountChange(u.id, e.target.value)}
                                                 inputProps={{ min: 0, max: 100, step: 1 }}
                                                 sx={{ width: 90 }}
                                             />
@@ -222,7 +216,7 @@ export default function ManageUsers() {
                                             size="small"
                                             type="date"
                                             value={discountStartValue}
-                                            onChange={(e) => handleDiscountStartChange(u.id, e.target.value)}
+                                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleDiscountStartChange(u.id, e.target.value)}
                                             InputLabelProps={{ shrink: true }}
                                             sx={{ width: 150 }}
                                         />
@@ -232,60 +226,34 @@ export default function ManageUsers() {
                                             size="small"
                                             type="date"
                                             value={discountEndValue}
-                                            onChange={(e) => handleDiscountEndChange(u.id, e.target.value)}
+                                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleDiscountEndChange(u.id, e.target.value)}
                                             InputLabelProps={{ shrink: true }}
                                             sx={{ width: 150 }}
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Chip
-                                            label={isEmployee ? "Employee" : "Not Employee"}
-                                            color={isEmployee ? "success" : "default"}
-                                            size="small"
-                                        />
+                                        <Chip label={isEmployee ? "Employee" : "Not Employee"} color={isEmployee ? "success" : "default"} size="small" />
                                         {isAdmin && (
-                                            <Button
-                                                size="small"
-                                                sx={{ ml: 1 }}
-                                                onClick={() => handleEmployeeToggle(u.id, !isEmployee)}
-                                            >
+                                            <Button size="small" sx={{ ml: 1 }} onClick={() => handleEmployeeToggle(u.id, !isEmployee)}>
                                                 {isEmployee ? "Remove" : "Make Employee"}
                                             </Button>
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {/* Managers can Flag active users */}
                                         {isManager && !isUserFlagged && (
-                                            <Button
-                                                size="small"
-                                                color="warning"
-                                                startIcon={<FlagIcon />}
-                                                onClick={() => handleFlag(u.id)}
-                                            >
+                                            <Button size="small" color="warning" startIcon={<FlagIcon />} onClick={() => handleFlag(u.id)}>
                                                 Flag
                                             </Button>
                                         )}
 
-                                        {/* Admins can Unflag and Delete */}
                                         {isAdmin && (
                                             <>
                                                 {isUserFlagged && (
-                                                    <Button
-                                                        size="small"
-                                                        color="success"
-                                                        startIcon={<CheckCircleIcon />}
-                                                        onClick={() => handleUnflag(u.id)}
-                                                        sx={{ mr: 1 }}
-                                                    >
+                                                    <Button size="small" color="success" startIcon={<CheckCircleIcon />} onClick={() => handleUnflag(u.id)} sx={{ mr: 1 }}>
                                                         Review OK
                                                     </Button>
                                                 )}
-                                                <Button
-                                                    size="small"
-                                                    color="error"
-                                                    startIcon={<DeleteIcon />}
-                                                    onClick={() => handleDelete(u.id)}
-                                                >
+                                                <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => handleDelete(u.id)}>
                                                     Delete
                                                 </Button>
                                             </>

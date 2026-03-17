@@ -1,6 +1,8 @@
 package org.example.modules.users.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.example.common.dto.PageResponse;
 import org.example.modules.auth.dto.AuthResponse;
 import org.example.modules.auth.dto.SignupRequest;
@@ -13,9 +15,11 @@ import org.example.modules.users.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/users")
 public class UserController {
 
@@ -30,8 +34,8 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public PageResponse<UserAdminDto> getAllUsers(
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size
+            @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+            @RequestParam(name = "size", defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         return PageResponse.from(userService.getUsers(page, size), item -> item);
     }

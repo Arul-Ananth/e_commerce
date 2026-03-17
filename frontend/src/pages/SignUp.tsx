@@ -1,17 +1,20 @@
-import React, { useState } from "react";
-import {
-    Box,
-    Button,
-    TextField,
-    Typography,
-    Paper,
-} from "@mui/material";
+﻿import { useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import { Box, TextField, Button, Typography, Paper } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import apiService from "../api/ApiService";
+import apiService, { extractApiErrorMessage } from "../api/ApiService";
+
+interface SignUpForm {
+    username: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    captcha: string;
+}
 
 function SignUp() {
-    const [formData, setFormData] = useState({
-        username: "", // Changed from phone to username
+    const [formData, setFormData] = useState<SignUpForm>({
+        username: "",
         email: "",
         password: "",
         confirmPassword: "",
@@ -22,15 +25,12 @@ function SignUp() {
     const [submitting, setSubmitting] = useState(false);
     const navigate = useNavigate();
 
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError("");
 
@@ -45,18 +45,16 @@ function SignUp() {
 
         try {
             setSubmitting(true);
-            // Send username instead of phone
             await apiService.signup({
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
             });
 
-            alert("Signup successful! Please login.");
             navigate("/login");
         } catch (err) {
             console.error("Signup failed:", err);
-            setError("Signup failed. Please try again.");
+            setError(extractApiErrorMessage(err, "Signup failed. Please try again."));
         } finally {
             setSubmitting(false);
         }
@@ -82,54 +80,11 @@ function SignUp() {
                     Sign Up
                 </Typography>
                 <form onSubmit={handleSubmit}>
-                    <TextField
-                        label="Username"
-                        name="username"
-                        fullWidth
-                        margin="normal"
-                        required
-                        value={formData.username}
-                        onChange={handleChange}
-                    />
-                    <TextField
-                        label="Email"
-                        name="email"
-                        type="email"
-                        fullWidth
-                        margin="normal"
-                        required
-                        value={formData.email}
-                        onChange={handleChange}
-                    />
-                    <TextField
-                        label="Password"
-                        name="password"
-                        type="password"
-                        fullWidth
-                        margin="normal"
-                        required
-                        value={formData.password}
-                        onChange={handleChange}
-                    />
-                    <TextField
-                        label="Confirm Password"
-                        name="confirmPassword"
-                        type="password"
-                        fullWidth
-                        margin="normal"
-                        required
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                    />
-                    <TextField
-                        label="Captcha"
-                        name="captcha"
-                        fullWidth
-                        margin="normal"
-                        required
-                        value={formData.captcha}
-                        onChange={handleChange}
-                    />
+                    <TextField label="Username" name="username" fullWidth margin="normal" required value={formData.username} onChange={handleChange} />
+                    <TextField label="Email" name="email" type="email" fullWidth margin="normal" required value={formData.email} onChange={handleChange} />
+                    <TextField label="Password" name="password" type="password" fullWidth margin="normal" required value={formData.password} onChange={handleChange} />
+                    <TextField label="Confirm Password" name="confirmPassword" type="password" fullWidth margin="normal" required value={formData.confirmPassword} onChange={handleChange} />
+                    <TextField label="Captcha" name="captcha" fullWidth margin="normal" required value={formData.captcha} onChange={handleChange} />
                     <Typography variant="caption" sx={{ color: "gray" }}>
                         Enter "1234" for demo
                     </Typography>
@@ -140,13 +95,7 @@ function SignUp() {
                         </Typography>
                     )}
 
-                    <Button
-                        type="submit"
-                        fullWidth
-                        variant="contained"
-                        sx={{ mt: 2 }}
-                        disabled={submitting}
-                    >
+                    <Button type="submit" fullWidth variant="contained" sx={{ mt: 2 }} disabled={submitting}>
                         {submitting ? "Signing up..." : "Sign Up"}
                     </Button>
                 </form>

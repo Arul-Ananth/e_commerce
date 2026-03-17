@@ -1,5 +1,4 @@
-import React from "react";
-import { Box, Typography, Paper, Grid, Button } from "@mui/material";
+﻿import { Box, Typography, Paper, Grid, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 export default function ManagerDashboard() {
@@ -16,23 +15,11 @@ export default function ManagerDashboard() {
                 </Typography>
 
                 <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            onClick={() => navigate("/manager/add-product")}
-                        >
-                            Add Product
-                        </Button>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button fullWidth variant="contained" onClick={() => navigate("/manager/add-product")}>Add Product</Button>
                     </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            onClick={() => navigate("/manager/users")}
-                        >
-                            Manage Users
-                        </Button>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button fullWidth variant="contained" onClick={() => navigate("/manager/users")}>Manage Users</Button>
                     </Grid>
                 </Grid>
             </Paper>

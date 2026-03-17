@@ -40,6 +40,13 @@ public class ProductControllerIT extends IntegrationTestBase {
     }
 
     @Test
+    void get_products_rejects_size_above_limit() throws Exception {
+        mockMvc.perform(get("/api/v1/products")
+                        .param("size", "101"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void create_product_requires_admin_or_manager() throws Exception {
         User user = createUser("user@example.com", "secret123", "ROLE_USER");
         String token = tokenFor(user);

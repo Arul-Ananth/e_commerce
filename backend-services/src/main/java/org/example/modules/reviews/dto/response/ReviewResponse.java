@@ -1,10 +1,13 @@
 package org.example.modules.reviews.dto.response;
 
+import java.time.Instant;
+
 public record ReviewResponse(
         Long id,
         String user,
         String comment,
         int rating,
-        Long productId
+        Long productId,
+        Instant createdAt
 ) {
 }

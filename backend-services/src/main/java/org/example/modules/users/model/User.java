@@ -28,7 +28,8 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
-    private String username;
+    @Column(name = "username")
+    private String displayName;
 
     @Column(name = "is_flagged")
     private boolean isFlagged = false;
@@ -67,8 +68,8 @@ public class User implements UserDetails {
         return email;
     }
 
-    public String getRealUsername() {
-        return username;
+    public String getDisplayName() {
+        return displayName;
     }
 
     @Override
@@ -136,8 +137,8 @@ public class User implements UserDetails {
         this.roles = roles;
     }
 
-    public void setRealUsername(String username) {
-        this.username = username;
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 
     public void setFlagged(boolean flagged) {

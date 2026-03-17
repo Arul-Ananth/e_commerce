@@ -1,21 +1,25 @@
-// src/components/ProductCard.jsx
-import React from 'react';
-import { Card, CardContent, Typography, Grid } from '@mui/material';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import { Link } from 'react-router-dom';
+﻿import { Card, CardContent, Typography } from "@mui/material";
+import { LazyLoadImage } from "react-lazy-load-image-component";
+import { Link } from "react-router-dom";
+import type { Product } from "../types/models";
 
-function ProductCard({ product }) {
+interface ProductCardProps {
+    product: Product;
+}
+
+function ProductCard({ product }: ProductCardProps) {
+    const primaryImage = product.images?.[0] || "";
+
     return (
-        // Wrap the card in a Link to /product/:id
-        <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link to={`/product/${product.id}`} style={{ textDecoration: "none", color: "inherit" }}>
             <Card>
                 <LazyLoadImage
                     alt={product.name}
-                    src={product.images[0]}
+                    src={primaryImage}
                     effect="blur"
                     width="100%"
                     height="180px"
-                    style={{ objectFit: 'cover', display: 'block' }}
+                    style={{ objectFit: "cover", display: "block" }}
                 />
                 <CardContent>
                     <Typography variant="h6">{product.name}</Typography>

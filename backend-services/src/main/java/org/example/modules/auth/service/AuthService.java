@@ -44,27 +44,25 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
-        User user = new User();
+        var user = new User();
         user.setEmail(req.email());
         user.setPassword(passwordEncoder.encode(req.password()));
-        user.setRealUsername(req.username() != null && !req.username().isBlank()
-                ? req.username()
-                : req.email().split("@")[0]);
+        user.setDisplayName(resolveDisplayName(req, req.email().split("@")[0]));
 
-        Role userRole = roleRepository.findByName("ROLE_USER")
+        var userRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role 'ROLE_USER' is not found"));
 
-        Set<Role> roles = new HashSet<>();
+        var roles = new HashSet<Role>();
         roles.add(userRole);
         user.setRoles(roles);
 
         user = userRepository.save(user);
-        String token = jwtService.generateToken(user);
+        var token = jwtService.generateToken(user);
         return new AuthResponse(token, mapToDto(user));
     }
 
     public AuthResponse login(String email, String password) {
-        User user = userRepository.findByEmail(email)
+        var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         enforceAccountActive(user);
@@ -73,7 +71,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        String token = jwtService.generateToken(user);
+        var token = jwtService.generateToken(user);
         return new AuthResponse(token, mapToDto(user));
     }
 
@@ -82,18 +80,18 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
-        User user = new User();
+        var user = new User();
         user.setEmail(req.email());
         user.setPassword(passwordEncoder.encode(req.password()));
-        user.setRealUsername(req.username() != null ? req.username() : "Manager");
+        user.setDisplayName(resolveDisplayName(req, "Manager"));
 
-        Role managerRole = roleRepository.findByName("ROLE_MANAGER")
+        var managerRole = roleRepository.findByName("ROLE_MANAGER")
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role 'ROLE_MANAGER' is not found"));
 
         user.setRoles(Set.of(managerRole));
         user = userRepository.save(user);
 
-        String token = jwtService.generateToken(user);
+        var token = jwtService.generateToken(user);
         return new AuthResponse(token, mapToDto(user));
     }
 
@@ -104,15 +102,22 @@ public class AuthService {
     }
 
     private UserDto mapToDto(User user) {
-        List<String> roleNames = user.getRoles().stream().map(Role::getName).toList();
+        var roleNames = user.getRoles().stream().map(Role::getName).toList();
         return new UserDto(
                 user.getId(),
                 user.getEmail(),
-                user.getRealUsername(),
+                user.getDisplayName(),
                 roleNames,
                 user.getUserDiscountPercentage(),
                 user.getUserDiscountStartDate(),
                 user.getUserDiscountEndDate()
         );
+    }
+
+    private String resolveDisplayName(SignupRequest request, String fallback) {
+        if (request.username() instanceof String requestedDisplayName && !requestedDisplayName.isBlank()) {
+            return requestedDisplayName;
+        }
+        return fallback;
     }
 }

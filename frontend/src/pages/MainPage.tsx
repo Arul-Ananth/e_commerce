@@ -1,18 +1,12 @@
-import React from "react";
-import Body from "../components/Body";
+﻿import Body from "../components/Body";
 
-function MainPage({ drawerOpen, toggleDrawer }) {
-    const [selectedCategory, setSelectedCategory] = React.useState("All");
+interface MainPageProps {
+    drawerOpen: boolean;
+    toggleDrawer: (nextState?: boolean) => void;
+}
 
-    return (
-        <Body
-            drawerOpen={drawerOpen}
-            toggleDrawer={toggleDrawer}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-        />
-    );
+function MainPage({ drawerOpen, toggleDrawer }: MainPageProps) {
+    return <Body drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />;
 }
 
 export default MainPage;
-

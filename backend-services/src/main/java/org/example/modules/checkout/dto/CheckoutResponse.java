@@ -1,8 +1,9 @@
 package org.example.modules.checkout.dto;
 
 public record CheckoutResponse(
-        String orderId,
+        Long orderId,
         String status,
-        String message
+        String checkoutUrl,
+        String expiresAt
 ) {
 }

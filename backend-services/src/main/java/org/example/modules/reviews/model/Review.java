@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.example.modules.catalog.model.Product;
 
+import java.time.Instant;
+
 @Entity
 public class Review {
 
@@ -14,6 +16,9 @@ public class Review {
     private String user;
     private String comment;
     private int rating;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 
     @ManyToOne
     @JoinColumn(name = "product_id")
@@ -60,5 +65,9 @@ public class Review {
 
     public void setProduct(Product product) {
         this.product = product;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 }

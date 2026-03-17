@@ -6,13 +6,14 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "strict": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true ,
     "skipLibCheck": true,
     "allowJs": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    
   },
   "include": ["src"]
 }

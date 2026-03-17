@@ -18,7 +18,7 @@ public class ReviewControllerIT extends IntegrationTestBase {
 
         mockMvc.perform(get("/api/v1/products/{id}/reviews", product.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
     }
 
     @Test
@@ -49,7 +49,32 @@ public class ReviewControllerIT extends IntegrationTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.user", is(user.getRealUsername())))
+                .andExpect(jsonPath("$.user", is(user.getDisplayName())))
                 .andExpect(jsonPath("$.comment", is("Nice")));
+
+        mockMvc.perform(get("/api/v1/products/{id}/reviews", product.getId())
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].comment", is("Nice")));
+    }
+
+    @Test
+    void reviews_pagination_rejects_invalid_size() throws Exception {
+        Product product = createProduct("Ruler", 2.99, "Stationery");
+
+        mockMvc.perform(get("/api/v1/products/{id}/reviews", product.getId())
+                        .param("size", "0"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void reviews_pagination_rejects_negative_page() throws Exception {
+        Product product = createProduct("Scale", 3.49, "Stationery");
+
+        mockMvc.perform(get("/api/v1/products/{id}/reviews", product.getId())
+                        .param("page", "-1"))
+                .andExpect(status().isBadRequest());
     }
 }

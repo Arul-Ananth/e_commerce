@@ -1,42 +1,41 @@
-import React from "react";
+﻿import { useState } from "react";
+import type { PropsWithChildren, ReactElement } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import MainPage from "./pages/MainPage";
-
 import SignUp from "./pages/SignUp";
 import ProductDetails from "./pages/ProductDetails";
 import Buy from "./pages/Buy";
 import Login from "./pages/Login";
-
-// --- Admin & Manager Components ---
 import AddProduct from "./pages/admin/AddProduct";
 import AddManager from "./pages/admin/AddManager";
 import ManageUsers from "./pages/admin/ManageUsers";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManagerDashboard from "./pages/admin/ManagerDashboard";
-
-// --- Route Wrappers ---
 import AdminRoute from "./global_component/AdminRoute";
 import ManagerRoute from "./global_component/ManagerRoute";
-
-// --- Contexts ---
 import { AuthProvider, useAuth } from "./global_component/AuthContext";
 import { CartProvider } from "./global_component/CartContext";
+import { buildLoginRedirectPath } from "./global_component/authUtils";
 
-// Existing ProtectedRoute for normal logged-in users (like Checkout)
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children }: PropsWithChildren): ReactElement {
     const { isAuthenticated } = useAuth();
     const location = useLocation();
+
     if (!isAuthenticated) {
-        const redirect = encodeURIComponent(location.pathname + location.search);
-        return <Navigate to={`/login?redirect=${redirect}`} replace />;
+        const redirectTarget = `${location.pathname}${location.search}`;
+        return <Navigate to={buildLoginRedirectPath(redirectTarget)} replace />;
     }
-    return children;
+
+    return <>{children}</>;
 }
 
 export default function App() {
-    const [drawerOpen, setDrawerOpen] = React.useState(false);
-    const toggleDrawer = () => setDrawerOpen((p) => !p);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+
+    const toggleDrawer = (nextState?: boolean) => {
+        setDrawerOpen((prev) => (typeof nextState === "boolean" ? nextState : !prev));
+    };
 
     return (
         <AuthProvider>
@@ -45,14 +44,11 @@ export default function App() {
                     <Header onMenuClick={toggleDrawer} />
 
                     <Routes>
-                        {/* --- Public Routes --- */}
                         <Route path="/" element={<MainPage drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />} />
                         <Route path="/product/:id" element={<ProductDetails />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/signup" element={<SignUp />} />
 
-                        {/* --- ADMIN ONLY ROUTES --- */}
-                        {/* Only ROLE_ADMIN can access these */}
                         <Route element={<AdminRoute />}>
                             <Route path="/admin/dashboard" element={<AdminDashboard />} />
                             <Route path="/admin/add-product" element={<AddProduct />} />
@@ -60,17 +56,12 @@ export default function App() {
                             <Route path="/admin/users" element={<ManageUsers />} />
                         </Route>
 
-                        {/* --- MANAGER ROUTES --- */}
-                        {/* ROLE_MANAGER (and usually ADMIN) can access these */}
                         <Route element={<ManagerRoute />}>
                             <Route path="/manager/dashboard" element={<ManagerDashboard />} />
-                            {/* Managers reuse the same Add Product page */}
                             <Route path="/manager/add-product" element={<AddProduct />} />
-                            {/* Managers reuse the same User Management page (but with fewer buttons) */}
                             <Route path="/manager/users" element={<ManageUsers />} />
                         </Route>
 
-                        {/* --- Protected User Routes --- */}
                         <Route
                             path="/checkout"
                             element={
@@ -80,7 +71,6 @@ export default function App() {
                             }
                         />
 
-                        {/* --- Catch All --- */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </Router>
@@ -88,4 +78,3 @@ export default function App() {
         </AuthProvider>
     );
 }
-

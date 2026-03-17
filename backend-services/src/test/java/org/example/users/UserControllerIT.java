@@ -41,6 +41,17 @@ public class UserControllerIT extends IntegrationTestBase {
     }
 
     @Test
+    void admin_list_users_rejects_size_above_limit() throws Exception {
+        User admin = createUser("admin-limit@example.com", "secret123", "ROLE_ADMIN");
+        String token = tokenFor(admin);
+
+        mockMvc.perform(get("/api/v1/users")
+                        .header("Authorization", "Bearer " + token)
+                        .param("size", "101"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void manager_can_flag_regular_user_but_not_admin() throws Exception {
         User manager = createUser("manager@example.com", "secret123", "ROLE_MANAGER");
         User target = createUser("target2@example.com", "secret123", "ROLE_USER");

@@ -6,10 +6,11 @@ import org.example.modules.reviews.dto.request.AddReviewRequest;
 import org.example.modules.reviews.dto.response.ReviewResponse;
 import org.example.modules.reviews.model.Review;
 import org.example.modules.reviews.repository.ReviewRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class ReviewService {
@@ -23,19 +24,21 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReviewResponse> getReviewsByProductId(Long productId) {
-        return reviewRepository.findByProductId(productId).stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<ReviewResponse> getReviewsByProductId(Long productId, int page, int size) {
+        return reviewRepository.findByProductId(
+                        productId,
+                        PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
+                )
+                .map(this::toResponse);
     }
 
     @Transactional
-    public ReviewResponse addReview(Long productId, AddReviewRequest request, String username) {
-        Product product = productService.getProductEntityById(productId);
+    public ReviewResponse addReview(Long productId, AddReviewRequest request, String displayName) {
+        var product = productService.getProductEntityById(productId);
 
-        Review review = new Review();
+        var review = new Review();
         review.setProduct(product);
-        review.setUser(username);
+        review.setUser(displayName);
         review.setRating(request.rating());
         review.setComment(request.comment());
 
@@ -48,7 +51,8 @@ public class ReviewService {
                 review.getUser(),
                 review.getComment(),
                 review.getRating(),
-                review.getProduct() != null ? review.getProduct().getId() : null
+                review.getProduct() != null ? review.getProduct().getId() : null,
+                review.getCreatedAt()
         );
     }
 }

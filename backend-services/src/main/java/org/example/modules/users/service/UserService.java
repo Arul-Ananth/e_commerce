@@ -34,7 +34,7 @@ public class UserService {
 
     @Transactional
     public UserAdminDto flagUser(Long id, User actor) {
-        User target = getExistingUser(id);
+        var target = getExistingUser(id);
         enforceManagerTargetRestrictions(actor, target);
         target.setFlagged(true);
         return toAdminDto(userRepository.save(target));
@@ -42,7 +42,7 @@ public class UserService {
 
     @Transactional
     public UserAdminDto unflagUser(Long id) {
-        User target = getExistingUser(id);
+        var target = getExistingUser(id);
         target.setFlagged(false);
         return toAdminDto(userRepository.save(target));
     }
@@ -57,7 +57,7 @@ public class UserService {
 
     @Transactional
     public UserAdminDto updateUserDiscount(Long id, UpdateUserDiscountRequest request, User actor) {
-        User target = getExistingUser(id);
+        var target = getExistingUser(id);
         enforceManagerTargetRestrictions(actor, target);
 
         if (request.startDate() != null && request.endDate() != null && request.endDate().isBefore(request.startDate())) {
@@ -78,8 +78,8 @@ public class UserService {
 
     @Transactional
     public UserAdminDto setEmployeeRole(Long id, ToggleEmployeeRoleRequest request) {
-        User target = getExistingUser(id);
-        Role employeeRole = roleRepository.findByName("ROLE_EMPLOYEE")
+        var target = getExistingUser(id);
+        var employeeRole = roleRepository.findByName("ROLE_EMPLOYEE")
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role not found"));
 
         if (Boolean.TRUE.equals(request.enabled())) {
@@ -114,7 +114,7 @@ public class UserService {
         return new UserAdminDto(
                 user.getId(),
                 user.getEmail(),
-                user.getRealUsername(),
+                user.getDisplayName(),
                 user.getRoles().stream().map(Role::getName).toList(),
                 user.isFlagged(),
                 user.getUserDiscountPercentage(),
