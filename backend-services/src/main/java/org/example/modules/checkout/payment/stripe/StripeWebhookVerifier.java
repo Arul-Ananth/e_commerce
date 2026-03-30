@@ -1,4 +1,4 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.stripe;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +30,7 @@ public class StripeWebhookVerifier {
     }
 
     public StripeWebhookEvent verifyAndParse(String payload, String signatureHeader) {
-        if (stripeProperties.getWebhookSecret() == null || stripeProperties.getWebhookSecret().isBlank()) {
+        if (stripeProperties.webhookSecret() == null || stripeProperties.webhookSecret().isBlank()) {
             throw new ResponseStatusException(SERVICE_UNAVAILABLE, "Stripe webhook secret is not configured");
         }
         if (signatureHeader == null || signatureHeader.isBlank()) {
@@ -57,7 +57,7 @@ public class StripeWebhookVerifier {
         }
 
         String signedPayload = timestamp + "." + payload;
-        String expectedSignature = hmacSha256Hex(stripeProperties.getWebhookSecret(), signedPayload);
+        String expectedSignature = hmacSha256Hex(stripeProperties.webhookSecret(), signedPayload);
         if (!MessageDigest.isEqual(expectedSignature.getBytes(StandardCharsets.UTF_8), signature.getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(BAD_REQUEST, "Invalid Stripe webhook signature");
         }

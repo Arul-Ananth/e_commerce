@@ -1,4 +1,4 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.stripe;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,12 +17,13 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 @Component
-public class StripeCheckoutSessionGateway implements CheckoutSessionGateway {
+public class StripeCheckoutSessionGateway implements StripeCheckoutGateway {
 
     private static final Logger log = LoggerFactory.getLogger(StripeCheckoutSessionGateway.class);
 
@@ -39,14 +40,14 @@ public class StripeCheckoutSessionGateway implements CheckoutSessionGateway {
                                                              String currency,
                                                              List<StripeCheckoutLineItem> lineItems,
                                                              String idempotencyKey) {
-        if (stripeProperties.getSecretKey() == null || stripeProperties.getSecretKey().isBlank()) {
+        if (stripeProperties.secretKey() == null || stripeProperties.secretKey().isBlank()) {
             throw new ResponseStatusException(SERVICE_UNAVAILABLE, "Stripe is not configured");
         }
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("mode", "payment");
-        form.add("success_url", stripeProperties.getSuccessUrl() + "?session_id={CHECKOUT_SESSION_ID}");
-        form.add("cancel_url", stripeProperties.getCancelUrl());
+        form.add("success_url", stripeProperties.successUrl() + "?session_id={CHECKOUT_SESSION_ID}");
+        form.add("cancel_url", stripeProperties.cancelUrl());
         form.add("client_reference_id", String.valueOf(orderId));
         form.add("metadata[orderId]", String.valueOf(orderId));
 
@@ -59,12 +60,12 @@ public class StripeCheckoutSessionGateway implements CheckoutSessionGateway {
         }
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(stripeProperties.getConnectTimeoutMs());
-        requestFactory.setReadTimeout(stripeProperties.getReadTimeoutMs());
+        requestFactory.setConnectTimeout(stripeProperties.connectTimeoutMs());
+        requestFactory.setReadTimeout(stripeProperties.readTimeoutMs());
 
         RestClient restClient = RestClient.builder()
-                .baseUrl(stripeProperties.getApiBaseUrl())
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + stripeProperties.getSecretKey())
+                .baseUrl(stripeProperties.apiBaseUrl())
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + stripeProperties.secretKey())
                 .requestFactory(requestFactory)
                 .build();
 
@@ -96,16 +97,16 @@ public class StripeCheckoutSessionGateway implements CheckoutSessionGateway {
                                     MultiValueMap<String, String> form,
                                     String idempotencyKey,
                                     Long orderId) {
-        int maxAttempts = Math.max(1, stripeProperties.getMaxAttempts());
+        int maxAttempts = Math.max(1, stripeProperties.maxAttempts());
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                return restClient.post()
+                return Objects.requireNonNull(restClient.post()
                         .uri("/checkout/sessions")
                         .header("Idempotency-Key", idempotencyKey)
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .body(form)
                         .retrieve()
-                        .body(String.class);
+                        .body(String.class), "Stripe response body must not be null");
             } catch (RestClientResponseException ex) {
                 boolean retryable = ex.getStatusCode().is5xxServerError() && attempt < maxAttempts;
                 log.error(

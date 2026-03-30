@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { PropsWithChildren } from "react";
 import ApiService from "../api/ApiService";
 import type { User } from "../types/models";
@@ -55,25 +55,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
         initializeAuth();
     }, []);
 
-    const login = (token: string, userData: User) => {
+    const login = useCallback((token: string, userData: User) => {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(userData));
         ApiService.setAuthToken(token);
         setIsAuthenticated(true);
         setUser(userData);
-    };
+    }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         ApiService.clearAuthToken();
         setIsAuthenticated(false);
         setUser(null);
-    };
+    }, []);
+
+    useEffect(() => {
+        ApiService.setUnauthorizedHandler(logout);
+        return () => ApiService.setUnauthorizedHandler(null);
+    }, [logout]);
 
     const value = useMemo<AuthContextValue>(
         () => ({ isAuthenticated, user, login, logout }),
-        [isAuthenticated, user],
+        [isAuthenticated, user, login, logout],
     );
 
     if (loading) {

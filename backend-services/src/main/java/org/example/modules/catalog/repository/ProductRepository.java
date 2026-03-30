@@ -13,17 +13,23 @@ import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    @EntityGraph(attributePaths = {"images"})
     @Query("select p from Product p")
-    Page<Product> findPageWithImages(Pageable pageable);
+    Page<Product> findPage(Pageable pageable);
 
-    @EntityGraph(attributePaths = {"images"})
     @Query("select p from Product p where p.category = :category")
-    Page<Product> findPageWithImagesByCategory(@Param("category") String category, Pageable pageable);
+    Page<Product> findPageByCategory(@Param("category") String category, Pageable pageable);
 
     @EntityGraph(attributePaths = {"images"})
     @Query("select p from Product p where p.id = :id")
     Optional<Product> findDetailedById(@Param("id") Long id);
+
+    @Query("""
+            select new org.example.modules.catalog.repository.ProductImageRow(p.id, image)
+            from Product p
+            join p.images image
+            where p.id in :productIds
+            """)
+    List<ProductImageRow> findImageRowsByProductIds(@Param("productIds") List<Long> productIds);
 
     List<Product> findByCategory(String category);
 

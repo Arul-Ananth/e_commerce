@@ -5,8 +5,10 @@ import org.example.modules.catalog.dto.response.DiscountResponse;
 import org.example.modules.catalog.dto.response.ProductListItemResponse;
 import org.example.modules.catalog.dto.response.ProductResponse;
 import org.example.modules.catalog.model.Product;
+import org.example.modules.catalog.repository.ProductImageRow;
 import org.example.modules.catalog.repository.ProductRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -15,7 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -30,9 +36,20 @@ public class ProductService {
     public Page<ProductListItemResponse> getProducts(String category, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "id"));
         Page<Product> products = (category == null || category.isBlank())
-                ? productRepository.findPageWithImages(pageable)
-                : productRepository.findPageWithImagesByCategory(category, pageable);
-        return products.map(this::toListItemResponse);
+                ? productRepository.findPage(pageable)
+                : productRepository.findPageByCategory(category, pageable);
+
+        if (products.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        var productPage = products.getContent();
+        Map<Long, List<String>> imagesByProductId = loadImagesByProductId(productPage);
+        List<ProductListItemResponse> items = productPage.stream()
+                .map(product -> toListItemResponse(product, imagesByProductId))
+                .toList();
+
+        return new PageImpl<>(items, pageable, products.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -81,14 +98,14 @@ public class ProductService {
         product.setImages(request.images());
     }
 
-    public ProductListItemResponse toListItemResponse(Product product) {
+    public ProductListItemResponse toListItemResponse(Product product, Map<Long, List<String>> imagesByProductId) {
         return new ProductListItemResponse(
                 product.getId(),
                 product.getName(),
                 product.getDescription(),
                 product.getCategory(),
                 product.getPrice(),
-                product.getImages()
+                imagesByProductId.getOrDefault(product.getId(), List.of())
         );
     }
 
@@ -107,8 +124,29 @@ public class ProductService {
                                 discount.getPercentage(),
                                 discount.getStartDate(),
                                 discount.getEndDate()
-                        ))
-                        .toList()
+                ))
+                .toList()
         );
+    }
+
+    private Map<Long, List<String>> loadImagesByProductId(List<Product> products) {
+        List<Long> productIds = products.stream()
+                .map(product -> Objects.requireNonNull(product.getId(), "Product id must be present for persisted products"))
+                .toList();
+
+        Map<Long, List<String>> imagesByProductId = new LinkedHashMap<>();
+        for (Long productId : productIds) {
+            imagesByProductId.put(productId, List.of());
+        }
+
+        Map<Long, List<String>> groupedImages = productRepository.findImageRowsByProductIds(productIds).stream()
+                .collect(Collectors.groupingBy(
+                        ProductImageRow::productId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(ProductImageRow::imageUrl, Collectors.toList())
+                ));
+
+        imagesByProductId.putAll(groupedImages);
+        return imagesByProductId;
     }
 }

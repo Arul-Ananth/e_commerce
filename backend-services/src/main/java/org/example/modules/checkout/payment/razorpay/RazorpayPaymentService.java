@@ -1,9 +1,14 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.razorpay;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.modules.checkout.model.PaymentProvider;
 import org.example.modules.checkout.model.PaymentStatus;
+import org.example.modules.checkout.payment.core.PaymentRequest;
+import org.example.modules.checkout.payment.core.PaymentResponse;
+import org.example.modules.checkout.payment.core.PaymentService;
+import org.example.modules.checkout.payment.core.PaymentVerifyRequest;
+import org.example.modules.checkout.payment.core.PaymentVerifyResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -35,16 +40,16 @@ public class RazorpayPaymentService implements PaymentService {
 
     @Override
     public PaymentResponse createPayment(PaymentRequest request) {
-        if (razorpayProperties.getKeyId() == null || razorpayProperties.getKeyId().isBlank()
-                || razorpayProperties.getKeySecret() == null || razorpayProperties.getKeySecret().isBlank()) {
+        if (razorpayProperties.keyId() == null || razorpayProperties.keyId().isBlank()
+                || razorpayProperties.keySecret() == null || razorpayProperties.keySecret().isBlank()) {
             throw new ResponseStatusException(SERVICE_UNAVAILABLE, "Razorpay is not configured");
         }
 
         String providerOrderId = "rzp_order_" + UUID.randomUUID();
-        String checkoutUrl = razorpayProperties.getCheckoutBaseUrl()
+        String checkoutUrl = razorpayProperties.checkoutBaseUrl()
                 + "?orderRef=" + urlEncode(providerOrderId)
-                + "&orderId=" + request.getOrderId()
-                + "&keyId=" + urlEncode(razorpayProperties.getKeyId());
+                + "&orderId=" + request.orderId()
+                + "&keyId=" + urlEncode(razorpayProperties.keyId());
 
         return new PaymentResponse(
                 PaymentProvider.RAZORPAY,
@@ -59,21 +64,21 @@ public class RazorpayPaymentService implements PaymentService {
 
     @Override
     public PaymentVerifyResponse verifyPayment(PaymentVerifyRequest request) {
-        if (razorpayProperties.getWebhookSecret() == null || razorpayProperties.getWebhookSecret().isBlank()) {
+        if (razorpayProperties.webhookSecret() == null || razorpayProperties.webhookSecret().isBlank()) {
             throw new ResponseStatusException(SERVICE_UNAVAILABLE, "Razorpay webhook secret is not configured");
         }
-        if (request.getSignature() == null || request.getSignature().isBlank()) {
+        if (request.signature() == null || request.signature().isBlank()) {
             throw new ResponseStatusException(BAD_REQUEST, "Missing X-Razorpay-Signature header");
         }
 
-        String expectedSignature = hmacSha256Hex(razorpayProperties.getWebhookSecret(), request.getPayload());
+        String expectedSignature = hmacSha256Hex(razorpayProperties.webhookSecret(), request.payload());
         if (!MessageDigest.isEqual(expectedSignature.getBytes(StandardCharsets.UTF_8),
-                request.getSignature().getBytes(StandardCharsets.UTF_8))) {
+                request.signature().getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(BAD_REQUEST, "Invalid Razorpay webhook signature");
         }
 
         try {
-            JsonNode root = objectMapper.readTree(request.getPayload());
+            JsonNode root = objectMapper.readTree(request.payload());
             String eventId = root.path("payload").path("payment").path("entity").path("id").asText(null);
             if (eventId == null || eventId.isBlank()) {
                 eventId = "rzp_event_" + UUID.randomUUID();

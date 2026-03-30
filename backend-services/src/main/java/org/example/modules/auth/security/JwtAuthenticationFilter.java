@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Jws<Claims> jws = jwtService.parseToken(token);
                 String userId = jws.getBody().getSubject();
 
-                userRepository.findById(Long.parseLong(userId)).ifPresent(user -> {
+                userRepository.findByIdWithRoles(Long.parseLong(userId)).ifPresent(user -> {
                     if (!user.isEnabled() || !user.isAccountNonLocked()) {
                         log.debug("Rejected token for disabled/locked userId={}", userId);
                         return;
@@ -60,6 +60,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 });
             } catch (Exception e) {
                 log.warn("JWT authentication failed: {}", e.getMessage());
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
+                return;
             }
         }
         filterChain.doFilter(request, response);

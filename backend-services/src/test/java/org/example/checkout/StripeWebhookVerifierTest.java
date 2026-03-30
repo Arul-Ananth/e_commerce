@@ -1,12 +1,11 @@
 package org.example.checkout;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.modules.checkout.payment.StripeProperties;
-import org.example.modules.checkout.payment.StripeWebhookEvent;
-import org.example.modules.checkout.payment.StripeWebhookVerifier;
+import org.example.modules.checkout.payment.stripe.StripeProperties;
+import org.example.modules.checkout.payment.stripe.StripeWebhookEvent;
+import org.example.modules.checkout.payment.stripe.StripeWebhookVerifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.Mac;
@@ -25,8 +24,18 @@ class StripeWebhookVerifierTest {
 
     @BeforeEach
     void setUp() {
-        StripeProperties properties = new StripeProperties();
-        ReflectionTestUtils.setField(properties, "webhookSecret", WEBHOOK_SECRET);
+        StripeProperties properties = new StripeProperties(
+                "",
+                "",
+                WEBHOOK_SECRET,
+                "https://api.stripe.com/v1",
+                "http://localhost:5173/checkout/success",
+                "http://localhost:5173/checkout/cancel",
+                "usd",
+                3000,
+                10000,
+                2
+        );
         verifier = new StripeWebhookVerifier(properties, new ObjectMapper());
     }
 

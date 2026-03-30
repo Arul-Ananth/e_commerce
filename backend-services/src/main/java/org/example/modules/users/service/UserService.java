@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Objects;
+
 @Service
 public class UserService {
 
@@ -28,7 +30,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserAdminDto> getUsers(int page, int size) {
-        return userRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "id")))
+        return userRepository.findAllWithRoles(PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "id")))
                 .map(this::toAdminDto);
     }
 
@@ -96,7 +98,10 @@ public class UserService {
             return;
         }
 
-        if (actor.getId().equals(target.getId())) {
+        Long actorId = Objects.requireNonNull(actor.getId(), "Actor id must be present");
+        Long targetId = Objects.requireNonNull(target.getId(), "Target id must be present");
+
+        if (actorId.equals(targetId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Managers cannot modify their own account");
         }
 
@@ -106,7 +111,7 @@ public class UserService {
     }
 
     private User getExistingUser(Long id) {
-        return userRepository.findById(id)
+        return userRepository.findByIdWithRoles(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 

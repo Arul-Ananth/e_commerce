@@ -1,6 +1,5 @@
 package org.example.modules.reviews.service;
 
-import org.example.modules.catalog.model.Product;
 import org.example.modules.catalog.service.ProductService;
 import org.example.modules.reviews.dto.request.AddReviewRequest;
 import org.example.modules.reviews.dto.response.ReviewResponse;

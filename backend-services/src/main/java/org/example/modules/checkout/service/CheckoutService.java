@@ -6,7 +6,13 @@ import org.example.modules.cart.service.CartService;
 import org.example.modules.checkout.dto.CheckoutResponse;
 import org.example.modules.checkout.dto.CheckoutStatusResponse;
 import org.example.modules.checkout.model.*;
-import org.example.modules.checkout.payment.*;
+import org.example.modules.checkout.payment.core.PaymentLineItem;
+import org.example.modules.checkout.payment.core.PaymentRequest;
+import org.example.modules.checkout.payment.core.PaymentResponse;
+import org.example.modules.checkout.payment.core.PaymentService;
+import org.example.modules.checkout.payment.core.PaymentServiceResolver;
+import org.example.modules.checkout.payment.core.PaymentVerifyRequest;
+import org.example.modules.checkout.payment.core.PaymentVerifyResponse;
 import org.example.modules.checkout.repository.CheckoutOrderRepository;
 import org.example.modules.checkout.repository.PaymentTransactionRepository;
 import org.example.modules.checkout.repository.WebhookEventLogRepository;
@@ -21,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -58,7 +65,10 @@ public class CheckoutService {
         }
 
         CheckoutOrder order = buildOrderSnapshot(user, cart);
-        CheckoutOrder savedOrder = checkoutOrderRepository.save(order);
+        CheckoutOrder savedOrder = Objects.requireNonNull(
+                checkoutOrderRepository.save(order),
+                "Saved order must not be null"
+        );
 
         PaymentService paymentService = paymentServiceResolver.resolveConfigured();
 
@@ -82,22 +92,22 @@ public class CheckoutService {
 
         try {
             PaymentResponse response = paymentService.createPayment(paymentRequest);
-            if (response.getProvider() != null) {
-                transaction.setProvider(response.getProvider());
+            if (response.provider() != null) {
+                transaction.setProvider(response.provider());
             }
-            if (response.getStatus() != null) {
-                transaction.setStatus(response.getStatus());
+            if (response.status() != null) {
+                transaction.setStatus(response.status());
             }
-            transaction.setProviderSessionId(blankToNull(response.getProviderReferenceId()));
-            transaction.setPaymentIntentId(blankToNull(response.getPaymentReferenceId()));
-            transaction.setExpiresAt(response.getExpiresAt());
+            transaction.setProviderSessionId(blankToNull(response.providerReferenceId()));
+            transaction.setPaymentIntentId(blankToNull(response.paymentReferenceId()));
+            transaction.setExpiresAt(response.expiresAt());
             paymentTransactionRepository.save(transaction);
 
             return new CheckoutResponse(
                     savedOrder.getId(),
                     savedOrder.getStatus().name(),
-                    response.getCheckoutUrl(),
-                    response.getExpiresAt() != null ? response.getExpiresAt().toString() : null
+                    response.checkoutUrl(),
+                    response.expiresAt() != null ? response.expiresAt().toString() : null
             );
         } catch (ResponseStatusException ex) {
             transaction.setStatus(PaymentStatus.FAILED);
@@ -137,12 +147,12 @@ public class CheckoutService {
         PaymentService paymentService = paymentServiceResolver.resolveByGateway(gateway);
         PaymentVerifyResponse event = paymentService.verifyPayment(new PaymentVerifyRequest(payload, signatureHeader));
 
-        if (!event.isSupportedEvent()) {
-            log.info("Ignoring unhandled webhook type={} provider={}", event.getEventType(), paymentService.getProvider());
+        if (!event.supportedEvent()) {
+            log.info("Ignoring unhandled webhook type={} provider={}", event.eventType(), paymentService.getProvider());
             return;
         }
 
-        String eventId = paymentService.getProvider().name() + ":" + event.getEventId();
+        String eventId = paymentService.getProvider().name() + ":" + event.eventId();
         if (webhookEventLogRepository.existsByEventId(eventId)) {
             log.info("Ignoring duplicate webhook eventId={}", eventId);
             return;
@@ -150,7 +160,7 @@ public class CheckoutService {
 
         try {
             applyWebhookTransition(paymentService.getProvider(), eventId, event);
-            webhookEventLogRepository.save(new WebhookEventLog(eventId, event.getEventType()));
+            webhookEventLogRepository.save(new WebhookEventLog(eventId, event.eventType()));
         } catch (DataIntegrityViolationException ex) {
             log.info("Ignoring duplicate webhook race eventId={}", eventId);
         }
@@ -162,7 +172,7 @@ public class CheckoutService {
 
         if (transaction == null) {
             log.warn("Webhook event points to unknown transaction provider={} ref={} paymentRef={}",
-                    provider, event.getProviderReferenceId(), event.getPaymentReferenceId());
+                    provider, event.providerReferenceId(), event.paymentReferenceId());
             return;
         }
 
@@ -170,16 +180,16 @@ public class CheckoutService {
             return;
         }
 
-        if (event.getProviderReferenceId() != null && !event.getProviderReferenceId().isBlank()) {
-            transaction.setProviderSessionId(event.getProviderReferenceId());
+        if (event.providerReferenceId() != null && !event.providerReferenceId().isBlank()) {
+            transaction.setProviderSessionId(event.providerReferenceId());
         }
-        if (event.getPaymentReferenceId() != null && !event.getPaymentReferenceId().isBlank()) {
-            transaction.setPaymentIntentId(event.getPaymentReferenceId());
+        if (event.paymentReferenceId() != null && !event.paymentReferenceId().isBlank()) {
+            transaction.setPaymentIntentId(event.paymentReferenceId());
         }
         transaction.setLastWebhookEventId(eventId);
 
         CheckoutOrder order = transaction.getOrder();
-        PaymentStatus nextStatus = event.getPaymentStatus();
+        PaymentStatus nextStatus = event.paymentStatus();
 
         if (nextStatus == PaymentStatus.SUCCEEDED) {
             transaction.setStatus(PaymentStatus.SUCCEEDED);
@@ -202,7 +212,7 @@ public class CheckoutService {
 
         if (nextStatus == PaymentStatus.FAILED) {
             transaction.setStatus(PaymentStatus.FAILED);
-            transaction.setFailureReason(blankToNull(event.getMessage()));
+            transaction.setFailureReason(blankToNull(event.message()));
             paymentTransactionRepository.save(transaction);
             if (order.getStatus() != OrderStatus.PAID) {
                 order.setStatus(OrderStatus.FAILED);
@@ -212,7 +222,7 @@ public class CheckoutService {
     }
 
     private Optional<PaymentTransaction> findTransaction(PaymentProvider provider, PaymentVerifyResponse event) {
-        String providerReference = blankToNull(event.getProviderReferenceId());
+        String providerReference = blankToNull(event.providerReferenceId());
         if (providerReference != null) {
             Optional<PaymentTransaction> byProviderReference =
                     paymentTransactionRepository.findByProviderAndProviderSessionId(provider, providerReference);
@@ -221,7 +231,7 @@ public class CheckoutService {
             }
         }
 
-        String paymentReference = blankToNull(event.getPaymentReferenceId());
+        String paymentReference = blankToNull(event.paymentReferenceId());
         if (paymentReference != null) {
             return paymentTransactionRepository.findByProviderAndPaymentIntentId(provider, paymentReference);
         }

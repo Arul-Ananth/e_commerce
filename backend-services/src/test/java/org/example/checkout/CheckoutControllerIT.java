@@ -3,9 +3,9 @@ package org.example.checkout;
 import org.example.modules.cart.model.Cart;
 import org.example.modules.cart.model.CartItem;
 import org.example.modules.catalog.model.Product;
-import org.example.modules.checkout.payment.CheckoutSessionGateway;
-import org.example.modules.checkout.payment.StripeCheckoutLineItem;
-import org.example.modules.checkout.payment.StripeCheckoutSession;
+import org.example.modules.checkout.payment.stripe.StripeCheckoutGateway;
+import org.example.modules.checkout.payment.stripe.StripeCheckoutLineItem;
+import org.example.modules.checkout.payment.stripe.StripeCheckoutSession;
 import org.example.modules.users.model.User;
 import org.example.testsupport.IntegrationTestBase;
 import org.junit.jupiter.api.Test;
@@ -25,14 +25,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @Import(CheckoutControllerIT.CheckoutTestConfig.class)
+@SuppressWarnings("null")
 public class CheckoutControllerIT extends IntegrationTestBase {
 
     @TestConfiguration
     static class CheckoutTestConfig {
         @Bean
         @Primary
-        CheckoutSessionGateway checkoutSessionGateway() {
-            return new CheckoutSessionGateway() {
+        StripeCheckoutGateway stripeCheckoutGateway() {
+            return new StripeCheckoutGateway() {
                 @Override
                 public StripeCheckoutSession createHostedCheckoutSession(Long orderId,
                                                                          String currency,

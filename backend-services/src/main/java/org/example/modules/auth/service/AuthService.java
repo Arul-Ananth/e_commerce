@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Service
@@ -62,7 +61,7 @@ public class AuthService {
     }
 
     public AuthResponse login(String email, String password) {
-        var user = userRepository.findByEmail(email)
+        var user = userRepository.findByEmailWithRoles(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         enforceAccountActive(user);

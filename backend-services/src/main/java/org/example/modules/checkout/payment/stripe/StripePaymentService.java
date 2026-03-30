@@ -1,7 +1,12 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.stripe;
 
 import org.example.modules.checkout.model.PaymentProvider;
 import org.example.modules.checkout.model.PaymentStatus;
+import org.example.modules.checkout.payment.core.PaymentRequest;
+import org.example.modules.checkout.payment.core.PaymentResponse;
+import org.example.modules.checkout.payment.core.PaymentService;
+import org.example.modules.checkout.payment.core.PaymentVerifyRequest;
+import org.example.modules.checkout.payment.core.PaymentVerifyResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,10 +14,10 @@ import java.util.List;
 @Service
 public class StripePaymentService implements PaymentService {
 
-    private final CheckoutSessionGateway checkoutSessionGateway;
+    private final StripeCheckoutGateway checkoutSessionGateway;
     private final StripeWebhookVerifier stripeWebhookVerifier;
 
-    public StripePaymentService(CheckoutSessionGateway checkoutSessionGateway,
+    public StripePaymentService(StripeCheckoutGateway checkoutSessionGateway,
                                 StripeWebhookVerifier stripeWebhookVerifier) {
         this.checkoutSessionGateway = checkoutSessionGateway;
         this.stripeWebhookVerifier = stripeWebhookVerifier;
@@ -25,15 +30,15 @@ public class StripePaymentService implements PaymentService {
 
     @Override
     public PaymentResponse createPayment(PaymentRequest request) {
-        List<StripeCheckoutLineItem> lineItems = request.getLineItems().stream()
-                .map(item -> new StripeCheckoutLineItem(item.getName(), item.getUnitAmount(), item.getQuantity()))
+        List<StripeCheckoutLineItem> lineItems = request.lineItems().stream()
+                .map(item -> new StripeCheckoutLineItem(item.name(), item.unitAmount(), item.quantity()))
                 .toList();
 
         StripeCheckoutSession session = checkoutSessionGateway.createHostedCheckoutSession(
-                request.getOrderId(),
-                request.getCurrency(),
+                request.orderId(),
+                request.currency(),
                 lineItems,
-                request.getIdempotencyKey()
+                request.idempotencyKey()
         );
 
         return new PaymentResponse(
@@ -49,7 +54,7 @@ public class StripePaymentService implements PaymentService {
 
     @Override
     public PaymentVerifyResponse verifyPayment(PaymentVerifyRequest request) {
-        StripeWebhookEvent event = stripeWebhookVerifier.verifyAndParse(request.getPayload(), request.getSignature());
+        StripeWebhookEvent event = stripeWebhookVerifier.verifyAndParse(request.payload(), request.signature());
         String type = event.type();
 
         if ("checkout.session.completed".equals(type)) {

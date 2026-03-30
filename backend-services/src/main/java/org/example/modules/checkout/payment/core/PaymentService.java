@@ -1,4 +1,4 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.core;
 
 import org.example.modules.checkout.model.PaymentProvider;
 

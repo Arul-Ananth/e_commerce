@@ -21,6 +21,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class CartService {
@@ -74,7 +75,7 @@ public class CartService {
         }
 
         cartItemRepository.save(item);
-        return toResponse(cartRepository.findById(cart.getId()).orElse(cart));
+        return reloadCart(cart);
     }
 
     @Transactional
@@ -92,7 +93,7 @@ public class CartService {
             cartItemRepository.save(item);
         }
 
-        return toResponse(cartRepository.findById(cart.getId()).orElse(cart));
+        return reloadCart(cart);
     }
 
     @Transactional
@@ -100,7 +101,7 @@ public class CartService {
         Cart cart = getOrCreateCart(user);
         Product product = productService.getProductEntityById(productId);
         cartItemRepository.deleteByCartAndProduct(cart, product);
-        return toResponse(cartRepository.findById(cart.getId()).orElse(cart));
+        return reloadCart(cart);
     }
 
     @Transactional
@@ -123,7 +124,7 @@ public class CartService {
 
         item.setSelectedDiscount(resolveSelectedDiscount(product, discountId, false));
         cartItemRepository.save(item);
-        return toResponse(cartRepository.findById(cart.getId()).orElse(cart));
+        return reloadCart(cart);
     }
 
     private CartResponse toResponse(Cart cart) {
@@ -131,6 +132,11 @@ public class CartService {
                 .map(this::toCartItemDto)
                 .toList();
         return new CartResponse(items);
+    }
+
+    private CartResponse reloadCart(Cart cart) {
+        Long cartId = Objects.requireNonNull(cart.getId(), "Cart id must be available after persistence");
+        return toResponse(cartRepository.findById(cartId).orElse(cart));
     }
 
     private CartItemDto toCartItemDto(CartItem item) {

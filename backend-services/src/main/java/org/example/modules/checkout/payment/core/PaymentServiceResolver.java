@@ -1,4 +1,4 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.core;
 
 import org.example.modules.checkout.model.PaymentProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,14 +14,14 @@ import java.util.Map;
 public class PaymentServiceResolver {
 
     private final Map<PaymentProvider, PaymentService> services = new EnumMap<>(PaymentProvider.class);
+    private final String configuredGateway;
 
-    @Value("${app.payment.gateway:stripe}")
-    private String configuredGateway;
-
-    public PaymentServiceResolver(List<PaymentService> serviceList) {
+    public PaymentServiceResolver(List<PaymentService> serviceList,
+                                  @Value("${app.payment.gateway:stripe}") String configuredGateway) {
         for (PaymentService paymentService : serviceList) {
             services.put(paymentService.getProvider(), paymentService);
         }
+        this.configuredGateway = configuredGateway;
     }
 
     public PaymentService resolveConfigured() {

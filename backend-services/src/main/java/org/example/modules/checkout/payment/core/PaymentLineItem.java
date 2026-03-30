@@ -1,8 +1,8 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.core;
 
 import java.math.BigDecimal;
 
-public record StripeCheckoutLineItem(
+public record PaymentLineItem(
         String name,
         BigDecimal unitAmount,
         int quantity

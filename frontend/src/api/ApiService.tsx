@@ -37,11 +37,30 @@ interface ApiErrorResponse {
     message?: string;
 }
 
+type UnauthorizedHandler = () => void;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
 function asError(error: unknown): AxiosError<ApiErrorResponse> | null {
     if (axios.isAxiosError(error)) {
         return error;
     }
     return null;
+}
+
+api.interceptors.response.use(
+    (response) => response,
+    (error: unknown) => {
+        const axiosError = asError(error);
+        if (axiosError?.response?.status === 401) {
+            unauthorizedHandler?.();
+        }
+        return Promise.reject(error);
+    },
+);
+
+function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+    unauthorizedHandler = handler;
 }
 
 export async function fetchCategories(): Promise<string[]> {
@@ -295,6 +314,7 @@ export default {
     authApi,
     setAuthToken,
     clearAuthToken,
+    setUnauthorizedHandler,
     login,
     signup,
     getCart,

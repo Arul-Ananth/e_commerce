@@ -1,8 +1,8 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.stripe;
 
 import java.util.List;
 
-public interface CheckoutSessionGateway {
+public interface StripeCheckoutGateway {
     StripeCheckoutSession createHostedCheckoutSession(Long orderId,
                                                       String currency,
                                                       List<StripeCheckoutLineItem> lineItems,

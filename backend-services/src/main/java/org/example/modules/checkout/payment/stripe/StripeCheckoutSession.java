@@ -1,4 +1,4 @@
-package org.example.modules.checkout.payment;
+package org.example.modules.checkout.payment.stripe;
 
 import java.time.Instant;
 
