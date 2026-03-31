@@ -1,4 +1,4 @@
-# Runtime Scalability + DB Evolution + Stripe Integration Plan
+# Runtime Scalability + DB Evolution + Payment Integration Plan
 
 Date: 2026-03-15  
 Project: `backend-services`
@@ -9,18 +9,18 @@ Project: `backend-services`
   - Reviews pagination with deterministic sort and validated `page`/`size`.
   - Max page-size caps (`1..100`) on product/user/review paginated endpoints.
   - Hot-path index updates in `DatabaseInit.sql`.
-  - Stripe hosted checkout implementation with order/payment ledger.
-  - Stripe webhook endpoint with signature verification and event idempotency.
+  - Hosted checkout implementation with order/payment ledger.
+  - Payment webhook endpoint with signature verification and event idempotency.
   - Checkout status polling endpoint.
   - Optimistic-lock conflict mapping to `409 CONFLICT`.
-  - DB change tracking doc added at `backend-services/docs/db-change-log.md`.
+  - DB change tracking doc added at `docs/operations/db-change-log.md`.
 - Remaining for local verification:
   - Full integration-test execution in an environment with Docker/Testcontainers available.
 
 ## Goal
 - Phase 1: fix real runtime scalability bottlenecks first.
 - Phase 2: make database evolution safer without reintroducing migration tooling yet.
-- Add Stripe API payment processing as the checkout payment backend.
+- Add payment-provider-backed checkout processing as the checkout backend.
 
 ## Constraints and Standards
 - Keep migration tooling disabled for now (no Flyway/Liquibase runtime integration in this phase).
@@ -87,7 +87,7 @@ Project: `backend-services`
 2. Require every schema/index change to be updated in this file during this phase.
 
 ### 2. Introduce migration-ready discipline now
-1. Add `docs/db-change-log.md` (or equivalent) to track schema deltas chronologically.
+1. Add `docs/operations/db-change-log.md` (or equivalent) to track schema deltas chronologically.
 2. For each DB change PR:
    - record rationale,
    - record forward SQL delta,
@@ -104,27 +104,27 @@ Project: `backend-services`
 2. Baseline SQL and runtime config remain consistent.
 3. No automatic runtime schema mutation in non-dev environments.
 
-## Stripe API Payment Processing Plan
+## Payment API Processing Plan
 
 ### 1. Payment domain model additions
 1. Introduce order/payment persistence (new module or `checkout` submodule):
    - `Order` (id, userId, status, totalAmount, currency, createdAt).
    - `OrderItem` snapshot (productId, title, unitPrice, quantity, appliedDiscount metadata).
-   - `PaymentTransaction` (provider=`STRIPE`, providerSessionId, paymentIntentId, status, idempotencyKey, timestamps).
+   - `PaymentTransaction` (provider-aware, providerSessionId, paymentIntentId, status, idempotencyKey, timestamps).
 2. Do not rely on mutable cart for post-checkout truth; persist immutable order snapshot before redirecting to Stripe.
 
-### 2. Stripe-backed checkout flow
+### 2. Provider-backed checkout flow
 1. Replace current `POST /api/v1/checkout` behavior:
    - Build order snapshot from current cart.
-   - Create Stripe Checkout Session server-side.
+   - Create a provider checkout/payment session server-side.
    - Persist `PENDING_PAYMENT` order + transaction.
    - Return `checkoutUrl` (or sessionId) to frontend.
 2. Do not clear cart on session creation.
 3. Clear cart only after verified successful payment event.
 
 ### 3. Webhook-driven finalization
-1. Add `POST /api/v1/payments/webhook/stripe` endpoint.
-2. Verify Stripe signature with webhook secret.
+1. Add `POST /api/v1/payments/webhook/{gateway}` endpoint.
+2. Verify the active provider signature with its configured webhook secret.
 3. Handle events idempotently:
    - `checkout.session.completed` / `payment_intent.succeeded` -> mark order `PAID`, clear cart if not already cleared.
    - failure/expired events -> mark `FAILED` or `EXPIRED`.
@@ -146,17 +146,17 @@ Project: `backend-services`
 4. Use idempotency keys on checkout-session creation.
 5. Log failures with correlation IDs; keep exception messages in server logs.
 
-### 6. Stripe test plan
+### 6. Payment test plan
 1. Unit tests for session creation request mapping and webhook signature validation.
 2. Integration tests for:
    - successful payment -> order paid + cart cleared,
    - failed/expired payment -> order not paid + cart retained,
    - duplicate webhook delivery -> no duplicate state transition.
-3. End-to-end test using Stripe test mode cards/events.
+3. End-to-end test using provider test credentials and webhook events.
 
 ## Delivery Order
 1. Phase 1 scalability fixes (N+1, pagination, caps, indexes, read-model DTOs, write-flow audit).
-2. Stripe payment integration (order snapshot + checkout session + webhook finalization).
+2. Payment integration (order snapshot + checkout session + webhook finalization).
 3. Phase 2 DB evolution discipline updates and documentation hardening.
 
 ## Risks and Mitigations

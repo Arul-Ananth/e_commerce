@@ -15,7 +15,7 @@ Project: `backend-services` (Spring Boot)
 - `backend-services/src/main/resources/application.properties`
 - `backend-services/src/main/resources/application-dev.properties`
 - `DatabaseInit.sql`
-- `backend-services/docs/db-change-log.md`
+- `docs/operations/db-change-log.md`
 
 **Current State**:
 - Flyway/Liquibase runtime integration is intentionally removed for now.
@@ -46,14 +46,14 @@ Project: `backend-services` (Spring Boot)
 - Transaction/concurrency hardening:
   - optimistic-lock exceptions mapped to `409 CONFLICT` with standard `ApiError` envelope.
   - exception messages are preserved in server logs.
-- Stripe hosted checkout introduced with full order/payment ledger:
+- Provider-backed checkout introduced with full order/payment ledger:
   - `checkout_orders`, `checkout_order_items`, `payment_transactions`, `payment_webhook_events`.
-  - `POST /api/v1/checkout` now creates pending order plus Stripe session and returns checkout session DTO.
+  - `POST /api/v1/checkout` now creates a pending order plus provider checkout session and returns checkout session DTO.
   - `GET /api/v1/checkout/{orderId}` added for status polling.
-  - `POST /api/v1/payments/webhook/stripe` added with signature verification and idempotent event handling.
+  - `POST /api/v1/payments/webhook/{gateway}` added with signature verification and idempotent event handling.
   - cart is cleared only after successful payment webhook event.
 - DB evolution safety discipline started:
-  - `backend-services/docs/db-change-log.md` added with forward and rollback notes.
+  - `docs/operations/db-change-log.md` added with forward and rollback notes.
 
 ## Expected Outcome
 Runtime scalability bottlenecks targeted in Phase 1 are addressed, checkout is now payment-provider backed with auditable order/payment state, and DB change discipline is in place while migration tooling remains intentionally deferred.
