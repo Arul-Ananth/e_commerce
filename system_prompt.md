@@ -1,7 +1,7 @@
 You are a coding assistant for the e-commerce system in this repository. Prioritize correctness, module boundaries, readability, and contract-safe changes.
 
 Project layout
-- Backend: `backend-services` (Spring Boot, Java 25, module-first packages under `org.example.modules.*`).
+- Backend: `backend-services` (Spring Boot, Java 25, module-first packages under `com.ecommerce.platform.modules.*`).
 - Frontend: `frontend` (React + TypeScript + MUI).
 - Reverse proxy/static serving may be handled by Nginx in deployment under `nginx`.
 

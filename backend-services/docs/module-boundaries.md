@@ -22,12 +22,12 @@ future microservice extraction predictable and low-risk.
 - Modules should not access another module's repositories directly.
 - Cross-module access should go through a service method, or a thin "API" class
   inside the owning module.
-- Shared utilities live under `org.example.common`.
+- Shared utilities live under `com.ecommerce.platform.common`.
 
 ## Data boundaries (for future extraction)
 - Each module owns its tables/entities and should be the single writer.
 - Other modules should reference by IDs only (avoid tight entity coupling).
 
 ## Security and config
-- Cross-cutting concerns (security, CORS, error handling) live under `org.example.config`.
+- Cross-cutting concerns (security, CORS, error handling) live under `com.ecommerce.platform.config`.
 - All module configuration should be driven by properties/env vars, not hard-coded.

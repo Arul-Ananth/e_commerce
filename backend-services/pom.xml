@@ -5,13 +5,13 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.example</groupId>
-    <artifactId>springboot-java25-demo</artifactId>
+    <groupId>com.ecommerce.platform</groupId>
+    <artifactId>commerce-platform-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Spring Boot Java 25 Demo</name>
-    <description>Demo project for Spring Boot with Java 25</description>
+    <name>Commerce Platform Backend</name>
+    <description>Backend services for the commerce-platform application</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
