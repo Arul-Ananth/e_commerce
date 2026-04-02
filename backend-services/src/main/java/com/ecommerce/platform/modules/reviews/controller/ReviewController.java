@@ -7,7 +7,7 @@ import com.ecommerce.platform.common.dto.PageResponse;
 import com.ecommerce.platform.modules.reviews.dto.request.AddReviewRequest;
 import com.ecommerce.platform.modules.reviews.dto.response.ReviewResponse;
 import com.ecommerce.platform.modules.reviews.service.ReviewService;
-import com.ecommerce.platform.modules.users.model.User;
+import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -34,7 +34,7 @@ public class ReviewController {
     @PostMapping
     public ResponseEntity<ReviewResponse> addReview(@PathVariable("productId") Long productId,
                                                     @Valid @RequestBody AddReviewRequest request,
-                                                    @AuthenticationPrincipal User user) {
+                                                    @AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.status(201)
                 .body(reviewService.addReview(productId, request, user.getDisplayName()));
     }

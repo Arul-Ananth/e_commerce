@@ -13,10 +13,12 @@ import com.ecommerce.platform.modules.checkout.payment.core.PaymentService;
 import com.ecommerce.platform.modules.checkout.payment.core.PaymentServiceResolver;
 import com.ecommerce.platform.modules.checkout.payment.core.PaymentVerifyRequest;
 import com.ecommerce.platform.modules.checkout.payment.core.PaymentVerifyResponse;
+import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import com.ecommerce.platform.modules.checkout.repository.CheckoutOrderRepository;
 import com.ecommerce.platform.modules.checkout.repository.PaymentTransactionRepository;
 import com.ecommerce.platform.modules.checkout.repository.WebhookEventLogRepository;
 import com.ecommerce.platform.modules.users.model.User;
+import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -42,23 +44,26 @@ public class CheckoutService {
     private final WebhookEventLogRepository webhookEventLogRepository;
     private final PaymentServiceResolver paymentServiceResolver;
     private final String defaultCurrency;
+    private final EntityManager entityManager;
 
     public CheckoutService(CartService cartService,
                            CheckoutOrderRepository checkoutOrderRepository,
                            PaymentTransactionRepository paymentTransactionRepository,
                            WebhookEventLogRepository webhookEventLogRepository,
                            PaymentServiceResolver paymentServiceResolver,
+                           EntityManager entityManager,
                            @Value("${app.payment.default-currency:usd}") String defaultCurrency) {
         this.cartService = cartService;
         this.checkoutOrderRepository = checkoutOrderRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.webhookEventLogRepository = webhookEventLogRepository;
         this.paymentServiceResolver = paymentServiceResolver;
+        this.entityManager = entityManager;
         this.defaultCurrency = defaultCurrency;
     }
 
     @Transactional
-    public CheckoutResponse createCheckoutSession(User user) {
+    public CheckoutResponse createCheckoutSession(AuthenticatedUser user) {
         CartResponse cart = cartService.getCart(user);
         if (cart.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty");
@@ -120,7 +125,7 @@ public class CheckoutService {
     }
 
     @Transactional(readOnly = true)
-    public CheckoutStatusResponse getOrderStatus(Long orderId, User requester) {
+    public CheckoutStatusResponse getOrderStatus(Long orderId, AuthenticatedUser requester) {
         CheckoutOrder order = checkoutOrderRepository.findDetailedById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
@@ -196,7 +201,9 @@ public class CheckoutService {
             paymentTransactionRepository.save(transaction);
             order.setStatus(OrderStatus.PAID);
             checkoutOrderRepository.save(order);
-            cartService.clear(order.getUser());
+            cartService.clearByUserId(
+                    order.getUser().getId()
+            );
             return;
         }
 
@@ -239,9 +246,9 @@ public class CheckoutService {
         return Optional.empty();
     }
 
-    private CheckoutOrder buildOrderSnapshot(User user, CartResponse cart) {
+    private CheckoutOrder buildOrderSnapshot(AuthenticatedUser user, CartResponse cart) {
         CheckoutOrder order = new CheckoutOrder();
-        order.setUser(user);
+        order.setUser(entityManager.getReference(User.class, user.getId()));
         order.setStatus(OrderStatus.PENDING_PAYMENT);
         order.setCurrency(resolveCurrency());
         order.setTotalAmount(BigDecimal.ZERO);

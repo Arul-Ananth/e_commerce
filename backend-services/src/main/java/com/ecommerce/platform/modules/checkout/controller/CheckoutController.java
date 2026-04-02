@@ -3,7 +3,7 @@ package com.ecommerce.platform.modules.checkout.controller;
 import com.ecommerce.platform.modules.checkout.dto.CheckoutResponse;
 import com.ecommerce.platform.modules.checkout.dto.CheckoutStatusResponse;
 import com.ecommerce.platform.modules.checkout.service.CheckoutService;
-import com.ecommerce.platform.modules.users.model.User;
+import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,14 +25,14 @@ public class CheckoutController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<CheckoutResponse> checkout(@AuthenticationPrincipal User user) {
+    public ResponseEntity<CheckoutResponse> checkout(@AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(checkoutService.createCheckoutSession(user));
     }
 
     @GetMapping("/{orderId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CheckoutStatusResponse> getOrderStatus(@PathVariable("orderId") Long orderId,
-                                                                 @AuthenticationPrincipal User user) {
+                                                                 @AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(checkoutService.getOrderStatus(orderId, user));
     }
 }

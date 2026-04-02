@@ -23,6 +23,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("select p from Product p where p.id = :id")
     Optional<Product> findDetailedById(@Param("id") Long id);
 
+    @EntityGraph(attributePaths = {"discounts"})
+    @Query("select p from Product p where p.id = :id")
+    Optional<Product> findForCartMutationById(@Param("id") Long id);
+
     @Query("""
             select new com.ecommerce.platform.modules.catalog.repository.ProductImageRow(p.id, image)
             from Product p

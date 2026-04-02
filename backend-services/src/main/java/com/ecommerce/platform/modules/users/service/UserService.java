@@ -1,5 +1,6 @@
 package com.ecommerce.platform.modules.users.service;
 
+import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import com.ecommerce.platform.modules.users.dto.UserAdminDto;
 import com.ecommerce.platform.modules.users.dto.request.ToggleEmployeeRoleRequest;
 import com.ecommerce.platform.modules.users.dto.request.UpdateUserDiscountRequest;
@@ -35,7 +36,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserAdminDto flagUser(Long id, User actor) {
+    public UserAdminDto flagUser(Long id, AuthenticatedUser actor) {
         var target = getExistingUser(id);
         enforceManagerTargetRestrictions(actor, target);
         target.setFlagged(true);
@@ -58,7 +59,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserAdminDto updateUserDiscount(Long id, UpdateUserDiscountRequest request, User actor) {
+    public UserAdminDto updateUserDiscount(Long id, UpdateUserDiscountRequest request, AuthenticatedUser actor) {
         var target = getExistingUser(id);
         enforceManagerTargetRestrictions(actor, target);
 
@@ -93,7 +94,7 @@ public class UserService {
         return toAdminDto(userRepository.save(target));
     }
 
-    private void enforceManagerTargetRestrictions(User actor, User target) {
+    private void enforceManagerTargetRestrictions(AuthenticatedUser actor, User target) {
         if (actor == null || !actor.hasRole("ROLE_MANAGER")) {
             return;
         }

@@ -7,10 +7,10 @@ import com.ecommerce.platform.common.dto.PageResponse;
 import com.ecommerce.platform.modules.auth.dto.AuthResponse;
 import com.ecommerce.platform.modules.auth.dto.SignupRequest;
 import com.ecommerce.platform.modules.auth.service.AuthService;
+import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import com.ecommerce.platform.modules.users.dto.UserAdminDto;
 import com.ecommerce.platform.modules.users.dto.request.ToggleEmployeeRoleRequest;
 import com.ecommerce.platform.modules.users.dto.request.UpdateUserDiscountRequest;
-import com.ecommerce.platform.modules.users.model.User;
 import com.ecommerce.platform.modules.users.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,7 +43,7 @@ public class UserController {
     @PatchMapping("/{id}/flag")
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<UserAdminDto> flagUser(@PathVariable("id") Long id,
-                                                 @AuthenticationPrincipal User actor) {
+                                                 @AuthenticationPrincipal AuthenticatedUser actor) {
         return ResponseEntity.ok(userService.flagUser(id, actor));
     }
 
@@ -64,8 +64,10 @@ public class UserController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<UserAdminDto> updateUserDiscount(@PathVariable("id") Long id,
                                                            @Valid @RequestBody UpdateUserDiscountRequest request,
-                                                           @AuthenticationPrincipal User actor) {
-        return ResponseEntity.ok(userService.updateUserDiscount(id, request, actor));
+                                                           @AuthenticationPrincipal AuthenticatedUser actor) {
+        return ResponseEntity.ok(
+                userService.updateUserDiscount(id, request, actor)
+        );
     }
 
     @PatchMapping("/{id}/employee")

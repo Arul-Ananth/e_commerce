@@ -84,7 +84,7 @@ public class AuthControllerIT extends IntegrationTestBase {
     }
 
     @Test
-    void flagged_user_token_is_rejected_on_protected_endpoint() throws Exception {
+    void flagged_user_token_remains_usable_until_token_expiry() throws Exception {
         User user = createUser("jwt-flagged@example.com", "secret123", "ROLE_USER");
         String token = tokenFor(user);
         user.setFlagged(true);
@@ -92,7 +92,7 @@ public class AuthControllerIT extends IntegrationTestBase {
 
         mockMvc.perform(get("/api/v1/cart")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk());
     }
 
     @Test

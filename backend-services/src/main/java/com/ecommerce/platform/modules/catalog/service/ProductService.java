@@ -64,6 +64,12 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public Product getProductForCartMutationById(Long id) {
+        return productRepository.findForCartMutationById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    }
+
+    @Transactional(readOnly = true)
     public List<String> getAllCategories() {
         return productRepository.findDistinctCategories();
     }
@@ -148,5 +154,28 @@ public class ProductService {
 
         imagesByProductId.putAll(groupedImages);
         return imagesByProductId;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> getPrimaryImagesByProductIds(List<Long> productIds) {
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, String> primaryImages = new LinkedHashMap<>();
+        for (Long productId : productIds) {
+            primaryImages.put(productId, null);
+        }
+
+        for (ProductImageRow row : productRepository.findImageRowsByProductIds(productIds)) {
+            if (primaryImages.get(row.productId()) == null) {
+                primaryImages.put(
+                        row.productId(),
+                        row.imageUrl()
+                );
+            }
+        }
+
+        return primaryImages;
     }
 }

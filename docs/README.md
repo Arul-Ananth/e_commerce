@@ -32,3 +32,5 @@ This repository uses the root `docs/` directory as the source of truth for archi
 - `reports/scalability-maintainability-report.md`: runtime scalability and maintainability status
 - `reports/documentation-audit.md`: documentation accuracy audit and remaining gaps
 - `reports/cart-auth-performance-audit.md`: cart, auth, query-shape, contention, caching, and virtual-thread audit
+- `reports/query-shape-followup-audit.md`: follow-up review of cart, catalog, product, review, and related query shapes
+- `reports/redundancy-readability-audit.md`: whole-codebase redundancy and readability findings
