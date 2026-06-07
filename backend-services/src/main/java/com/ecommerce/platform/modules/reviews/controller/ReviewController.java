@@ -28,7 +28,7 @@ public class ReviewController {
     public PageResponse<ReviewResponse> getReviews(@PathVariable("productId") Long productId,
                                                    @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
                                                    @RequestParam(name = "size", defaultValue = "20") @Min(1) @Max(100) int size) {
-        return PageResponse.from(reviewService.getReviewsByProductId(productId, page, size), item -> item);
+        return reviewService.getReviewsByProductId(productId, page, size);
     }
 
     @PostMapping

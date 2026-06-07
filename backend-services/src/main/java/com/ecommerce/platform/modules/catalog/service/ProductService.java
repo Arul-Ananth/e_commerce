@@ -1,5 +1,7 @@
 package com.ecommerce.platform.modules.catalog.service;
 
+import com.ecommerce.platform.config.CacheNames;
+import com.ecommerce.platform.common.dto.PageResponse;
 import com.ecommerce.platform.modules.catalog.dto.request.ProductUpsertRequest;
 import com.ecommerce.platform.modules.catalog.dto.response.DiscountResponse;
 import com.ecommerce.platform.modules.catalog.dto.response.ProductListItemResponse;
@@ -7,8 +9,10 @@ import com.ecommerce.platform.modules.catalog.dto.response.ProductResponse;
 import com.ecommerce.platform.modules.catalog.model.Product;
 import com.ecommerce.platform.modules.catalog.repository.ProductImageRow;
 import com.ecommerce.platform.modules.catalog.repository.ProductRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,14 +37,18 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductListItemResponse> getProducts(String category, int page, int size) {
+    @Cacheable(
+            cacheNames = CacheNames.PRODUCT_LISTS,
+            key = "{(#category == null || #category.isBlank()) ? 'all' : #category, #page, #size}"
+    )
+    public PageResponse<ProductListItemResponse> getProducts(String category, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "id"));
         Page<Product> products = (category == null || category.isBlank())
                 ? productRepository.findPage(pageable)
                 : productRepository.findPageByCategory(category, pageable);
 
         if (products.isEmpty()) {
-            return Page.empty(pageable);
+            return new PageResponse<>(List.of(), page, size, 0, 0, false);
         }
 
         var productPage = products.getContent();
@@ -49,10 +57,18 @@ public class ProductService {
                 .map(product -> toListItemResponse(product, imagesByProductId))
                 .toList();
 
-        return new PageImpl<>(items, pageable, products.getTotalElements());
+        return new PageResponse<>(
+                items,
+                products.getNumber(),
+                products.getSize(),
+                products.getTotalElements(),
+                products.getTotalPages(),
+                products.hasNext()
+        );
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.PRODUCTS, key = "#id")
     public ProductResponse getProductById(Long id) {
         return toDetailResponse(getProductEntityById(id));
     }
@@ -70,11 +86,16 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.CATEGORIES, key = "'all'")
     public List<String> getAllCategories() {
         return productRepository.findDistinctCategories();
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_LISTS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.CATEGORIES, allEntries = true)
+    })
     public ProductResponse createProduct(ProductUpsertRequest request) {
         Product product = new Product();
         applyUpsertRequest(product, request);
@@ -82,6 +103,14 @@ public class ProductService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.PRODUCTS, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_LISTS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.CATEGORIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_IMAGES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_DISCOUNTS, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CART, allEntries = true)
+    })
     public ProductResponse updateProduct(Long id, ProductUpsertRequest request) {
         Product existing = getProductEntityById(id);
         applyUpsertRequest(existing, request);
@@ -89,6 +118,15 @@ public class ProductService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.PRODUCTS, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_LISTS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.CATEGORIES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_IMAGES, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_REVIEWS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.PRODUCT_DISCOUNTS, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CART, allEntries = true)
+    })
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
@@ -157,6 +195,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.PRODUCT_IMAGES, key = "#productIds", unless = "#productIds.isEmpty()")
     public Map<Long, String> getPrimaryImagesByProductIds(List<Long> productIds) {
         if (productIds.isEmpty()) {
             return Map.of();

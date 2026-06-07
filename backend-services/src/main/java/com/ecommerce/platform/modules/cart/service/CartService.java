@@ -1,5 +1,6 @@
 package com.ecommerce.platform.modules.cart.service;
 
+import com.ecommerce.platform.config.CacheNames;
 import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import com.ecommerce.platform.modules.cart.dto.CartItemDiscountDto;
 import com.ecommerce.platform.modules.cart.dto.CartItemDto;
@@ -15,6 +16,8 @@ import com.ecommerce.platform.modules.catalog.service.ProductService;
 import com.ecommerce.platform.modules.users.model.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.OptimisticLockException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -58,29 +61,35 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.USER_CART, key = "#user.id")
     public CartResponse getCart(AuthenticatedUser user) {
         return buildCartResponse(user);
     }
 
+    @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#user.id")
     public CartResponse addOrIncrement(AuthenticatedUser user, Long productId, int quantity, Long discountId) {
         return withMutationRetry(() -> addOrIncrementInTransaction(user, productId, quantity, discountId));
     }
 
+    @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#user.id")
     public CartResponse setQuantity(AuthenticatedUser user, Long productId, int quantity) {
         return withMutationRetry(() -> setQuantityInTransaction(user, productId, quantity));
     }
 
+    @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#user.id")
     public CartResponse removeItem(AuthenticatedUser user, Long productId) {
         return withMutationRetry(() -> removeItemInTransaction(user, productId));
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#user.id")
     public CartResponse clear(AuthenticatedUser user) {
         clearByUserId(user.getId());
         return new CartResponse(List.of());
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#userId")
     public void clearByUserId(Long userId) {
         Cart cart = cartRepository.findByUserId(userId).orElse(null);
         if (cart != null) {
@@ -88,6 +97,7 @@ public class CartService {
         }
     }
 
+    @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#user.id")
     public CartResponse updateItemDiscount(AuthenticatedUser user, Long productId, Long discountId) {
         return withMutationRetry(() -> updateItemDiscountInTransaction(user, productId, discountId));
     }

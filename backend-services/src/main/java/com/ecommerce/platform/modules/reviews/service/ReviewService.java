@@ -1,10 +1,14 @@
 package com.ecommerce.platform.modules.reviews.service;
 
+import com.ecommerce.platform.config.CacheNames;
+import com.ecommerce.platform.common.dto.PageResponse;
 import com.ecommerce.platform.modules.catalog.service.ProductService;
 import com.ecommerce.platform.modules.reviews.dto.request.AddReviewRequest;
 import com.ecommerce.platform.modules.reviews.dto.response.ReviewResponse;
 import com.ecommerce.platform.modules.reviews.model.Review;
 import com.ecommerce.platform.modules.reviews.repository.ReviewRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -23,15 +27,18 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ReviewResponse> getReviewsByProductId(Long productId, int page, int size) {
-        return reviewRepository.findByProductId(
+    @Cacheable(cacheNames = CacheNames.PRODUCT_REVIEWS, key = "{#productId, #page, #size}")
+    public PageResponse<ReviewResponse> getReviewsByProductId(Long productId, int page, int size) {
+        Page<ReviewResponse> reviews = reviewRepository.findByProductId(
                         productId,
                         PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
                 )
                 .map(this::toResponse);
+        return PageResponse.from(reviews, item -> item);
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.PRODUCT_REVIEWS, allEntries = true)
     public ReviewResponse addReview(Long productId, AddReviewRequest request, String displayName) {
         var product = productService.getProductEntityById(productId);
 

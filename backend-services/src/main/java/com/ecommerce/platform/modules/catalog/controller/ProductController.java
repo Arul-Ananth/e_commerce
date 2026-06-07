@@ -31,7 +31,7 @@ public class ProductController {
             @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
             @RequestParam(name = "size", defaultValue = "20") @Min(1) @Max(100) int size
     ) {
-        return PageResponse.from(productService.getProducts(category, page, size), item -> item);
+        return productService.getProducts(category, page, size);
     }
 
     @GetMapping("/{id}")

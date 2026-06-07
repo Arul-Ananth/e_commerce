@@ -1,5 +1,6 @@
 package com.ecommerce.platform.modules.users.service;
 
+import com.ecommerce.platform.config.CacheNames;
 import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import com.ecommerce.platform.modules.users.dto.UserAdminDto;
 import com.ecommerce.platform.modules.users.dto.request.ToggleEmployeeRoleRequest;
@@ -8,6 +9,8 @@ import com.ecommerce.platform.modules.users.model.Role;
 import com.ecommerce.platform.modules.users.model.User;
 import com.ecommerce.platform.modules.users.repository.RoleRepository;
 import com.ecommerce.platform.modules.users.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -36,6 +39,10 @@ public class UserService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.USER_ROLES, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#id")
+    })
     public UserAdminDto flagUser(Long id, AuthenticatedUser actor) {
         var target = getExistingUser(id);
         enforceManagerTargetRestrictions(actor, target);
@@ -44,6 +51,10 @@ public class UserService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.USER_ROLES, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#id")
+    })
     public UserAdminDto unflagUser(Long id) {
         var target = getExistingUser(id);
         target.setFlagged(false);
@@ -51,6 +62,10 @@ public class UserService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.USER_ROLES, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#id")
+    })
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
@@ -59,6 +74,10 @@ public class UserService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.USER_ROLES, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#id")
+    })
     public UserAdminDto updateUserDiscount(Long id, UpdateUserDiscountRequest request, AuthenticatedUser actor) {
         var target = getExistingUser(id);
         enforceManagerTargetRestrictions(actor, target);
@@ -80,6 +99,10 @@ public class UserService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheNames.USER_ROLES, key = "#id"),
+            @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#id")
+    })
     public UserAdminDto setEmployeeRole(Long id, ToggleEmployeeRoleRequest request) {
         var target = getExistingUser(id);
         var employeeRole = roleRepository.findByName("ROLE_EMPLOYEE")
