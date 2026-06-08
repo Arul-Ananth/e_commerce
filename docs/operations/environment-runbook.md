@@ -13,6 +13,9 @@ APP_JWT_SECRET=replace-with-a-random-secret-at-least-32-chars
 SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/ecommerce_db
 SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=your-mysql-password
+SPRING_DATA_REDIS_HOST=localhost
+SPRING_DATA_REDIS_PORT=6379
+APP_CACHE_DEFAULT_TTL_MINUTES=10
 ```
 
 ## Common Optional Settings
@@ -21,10 +24,24 @@ SPRING_DATASOURCE_PASSWORD=your-mysql-password
 APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,https://localhost
 APP_PAYMENT_GATEWAY=stripe
 APP_PAYMENT_DEFAULT_CURRENCY=usd
-APP_MEDIA_UPLOAD_DIR=C:/Dev/e_commerce/imageResource/
-APP_MEDIA_RESOURCE_LOCATION=file:///C:/Dev/e_commerce/imageResource/
+APP_MEDIA_UPLOAD_DIR=../imageResource/
+APP_MEDIA_RESOURCE_LOCATION=file:../imageResource/
 APP_MEDIA_PUBLIC_BASE_URL=http://localhost:8080/images/
 ```
+
+## Redis Cache Notes
+
+- Redis is used through Spring Cache as a cache-aside performance layer.
+- MySQL remains the source of truth.
+- Default cache TTL is controlled by `APP_CACHE_DEFAULT_TTL_MINUTES`.
+- Cache-specific TTL overrides live in `RedisCacheConfig`.
+- If local Redis contains stale data from an older build, clear it with:
+
+```bash
+redis-cli flushall
+```
+
+Use a targeted `DEL` for shared Redis instances instead of `flushall`.
 
 ## Stripe Settings
 
@@ -56,6 +73,36 @@ APP_RAZORPAY_CHECKOUT_BASE_URL=http://localhost:5173/checkout/razorpay
 - `DatabaseInit.sql` is a full reset and reseed.
 - `DatabaseUpgrade.sql` is the non-destructive path for evolving an existing schema.
 
+## WSL/Linux Local Run
+
+Run the whole stack inside WSL/Linux when possible:
+
+```bash
+redis-cli ping
+sudo service mysql start
+cd /mnt/c/Dev/e_commerce
+mysql -h 127.0.0.1 -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS ecommerce_db;"
+mysql -h 127.0.0.1 -P 3306 -u root -p ecommerce_db < DatabaseInit.sql
+
+cd /mnt/c/Dev/e_commerce/backend-services
+export APP_JWT_SECRET=replace-with-a-random-secret-at-least-32-chars
+export SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/ecommerce_db
+export SPRING_DATASOURCE_USERNAME=root
+export SPRING_DATASOURCE_PASSWORD=your-mysql-password
+export SPRING_DATA_REDIS_HOST=localhost
+mvn spring-boot:run
+```
+
+Use Linux paths in WSL. For example, use `/mnt/c/Dev/e_commerce/backend-services`, not `C:\Dev\e_commerce\backend-services`.
+
+## Cross-Platform Notes
+
+- The backend is cross-platform when Java 25, Maven, MySQL, Redis, and media paths are configured for the host OS.
+- The frontend is cross-platform when Node.js/npm are installed.
+- `stripe-listen.bat` is Windows-specific. Use the Stripe CLI directly on Linux/WSL instead of the batch file.
+- Nginx deployment scripts under `nginx/` are Linux/WSL-oriented shell scripts.
+- `file:` media resource locations are OS-sensitive. Prefer the default relative path or set `APP_MEDIA_RESOURCE_LOCATION` per environment.
+
 ## Common Startup Failures
 
 ### Missing JWT secret
@@ -69,6 +116,14 @@ APP_RAZORPAY_CHECKOUT_BASE_URL=http://localhost:5173/checkout/razorpay
 ### Schema validation failure
 - Symptom: Hibernate reports missing columns or tables during startup
 - Fix: run `DatabaseInit.sql` for a reset or apply the needed changes from `DatabaseUpgrade.sql`
+
+### Unknown database
+- Symptom: `Unknown database 'ecommerce_db'` or Hibernate cannot determine dialect
+- Fix: create `ecommerce_db` in the MySQL instance used by the backend, then run `DatabaseInit.sql`
+
+### Redis stale serialization data
+- Symptom: Redis/Jackson cannot deserialize a cached object after code changes
+- Fix: clear local Redis cache entries and retry the request
 
 ### Java target mismatch
 - Symptom: Maven fails with `release version 25 not supported`

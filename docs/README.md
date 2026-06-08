@@ -7,6 +7,7 @@ This repository uses the root `docs/` directory as the source of truth for archi
 - `architecture/module-boundaries.md`: backend package boundaries and dependency rules
 - `architecture/readability-recommendations.md`: maintainability and readability guidance
 - `architecture/payment-db-evolution-plan.md`: architecture history and DB/payment evolution notes
+- `architecture/runtime-cache-portability.md`: Redis cache policy, TTL strategy, and cross-platform runtime notes
 
 ## Frontend
 

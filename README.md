@@ -1,6 +1,6 @@
 # Commerce Platform
 
-Full-stack e-commerce application with a React frontend, a Spring Boot backend, MySQL persistence, and Nginx-based deployment support.
+Full-stack e-commerce application with a React frontend, a Spring Boot backend, MySQL persistence, Redis cache-aside caching, and Nginx-based deployment support.
 
 ## Current Capabilities
 
@@ -9,6 +9,7 @@ Full-stack e-commerce application with a React frontend, a Spring Boot backend, 
 - Product catalog with categories, images, discounts, and reviews
 - Cart and checkout flows with payment gateway abstraction
 - Stripe and Razorpay payment integrations
+- Redis-backed cache-aside reads for catalog, reviews, images, categories, and cart responses
 - Secure image upload and public image serving
 - Nginx reverse proxy support for `/api` and `/auth`
 
@@ -17,6 +18,7 @@ Full-stack e-commerce application with a React frontend, a Spring Boot backend, 
 - Frontend: React, TypeScript, Vite, MUI
 - Backend: Spring Boot 3.5, Java 25
 - Database: MySQL 8
+- Cache: Redis
 - Reverse proxy: Nginx
 
 ## Repository Layout
@@ -39,6 +41,7 @@ Full-stack e-commerce application with a React frontend, a Spring Boot backend, 
 - Maven
 - Node.js 18+
 - MySQL 8
+- Redis 7-compatible server
 
 ### 1. Initialize the database
 
@@ -62,7 +65,11 @@ Minimum local values:
 
 ```properties
 APP_JWT_SECRET=replace-with-a-random-secret-at-least-32-chars
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/ecommerce_db
+SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=your-mysql-password
+SPRING_DATA_REDIS_HOST=localhost
+SPRING_DATA_REDIS_PORT=6379
 ```
 
 Optional but commonly needed:
@@ -87,6 +94,8 @@ Backend default URL:
 ```text
 http://localhost:8080
 ```
+
+The backend uses Redis only as a performance cache. MySQL remains the source of truth. If cached list data was created by an older local build, clear Redis once with `redis-cli flushall` or delete the relevant cache keys.
 
 ### 4. Start the frontend
 
@@ -135,6 +144,7 @@ Passwords are bcrypt-hashed in the SQL seed file. If you need the plain-text tes
 - `docs/README.md`
 - `docs/reference/api-reference.md`
 - `docs/architecture/module-boundaries.md`
+- `docs/architecture/runtime-cache-portability.md`
 - `docs/frontend/route-map.md`
 - `docs/frontend/state-and-auth.md`
 - `docs/frontend/api-integration.md`
@@ -149,9 +159,12 @@ Passwords are bcrypt-hashed in the SQL seed file. If you need the plain-text tes
 
 - The backend default runtime uses `spring.jpa.hibernate.ddl-auto=validate`, so schema drift will fail startup.
 - Java 21 can compile the code for local validation with overrides, but the project target remains Java 25.
+- For WSL/Linux runs, use Linux paths such as `/mnt/c/Dev/e_commerce`; do not use PowerShell syntax like `$env:...`.
+- The default media path is relative to `backend-services`, so run the backend from that directory or set `APP_MEDIA_RESOURCE_LOCATION` explicitly.
 - If the backend fails on startup, first check:
   - JWT secret presence
   - MySQL credentials
+  - Redis reachability for cache-backed reads
   - schema state versus `DatabaseInit.sql` or `DatabaseUpgrade.sql`
 
 ## API Surface
