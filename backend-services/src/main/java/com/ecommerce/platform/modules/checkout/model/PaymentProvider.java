@@ -3,6 +3,7 @@ package com.ecommerce.platform.modules.checkout.model;
 public enum PaymentProvider {
     STRIPE("stripe"),
     RAZORPAY("razorpay"),
+    LOADTEST("loadtest"),
     PAYPAL("paypal");
 
     private final String configKey;

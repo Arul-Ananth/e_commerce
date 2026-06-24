@@ -6,6 +6,8 @@ import MainPage from "./pages/MainPage";
 import SignUp from "./pages/SignUp";
 import ProductDetails from "./pages/ProductDetails";
 import Buy from "./pages/Buy";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import LoadTestCheckout from "./pages/LoadTestCheckout";
 import Login from "./pages/Login";
 import AddProduct from "./pages/admin/AddProduct";
 import AddManager from "./pages/admin/AddManager";
@@ -70,6 +72,9 @@ export default function App() {
                                 </ProtectedRoute>
                             }
                         />
+                        <Route path="/checkout/loadtest" element={<LoadTestCheckout />} />
+                        <Route path="/checkout/success" element={<CheckoutSuccess />} />
+                        <Route path="/checkout/cancel" element={<Navigate to="/checkout" replace />} />
 
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>

@@ -9,9 +9,19 @@ Full-stack e-commerce application with a React frontend, a Spring Boot backend, 
 - Product catalog with categories, images, discounts, and reviews
 - Cart and checkout flows with payment gateway abstraction
 - Stripe and Razorpay payment integrations
+- Local load-test payment gateway for capacity tests without external payment calls
 - Redis-backed cache-aside reads for catalog, reviews, images, categories, and cart responses
 - Secure image upload and public image serving
 - Nginx reverse proxy support for `/api` and `/auth`
+
+## How The App Fits Together
+
+- The React frontend talks to the backend through `/auth`, `/api/v1/**`, and `/images/**`.
+- The Spring Boot backend owns authentication, authorization, catalog, cart, checkout, payments, media, and administration workflows.
+- MySQL is the source of truth for users, products, carts, orders, payments, reviews, and media metadata.
+- Redis is a cache-aside performance layer only. If Redis has stale or incompatible cache entries, the app should keep serving from MySQL while logging cache warnings.
+- Checkout creates an immutable order snapshot before redirecting to the configured payment provider. Cart clearing happens only after a verified successful payment event.
+- Nginx can serve the built frontend and proxy backend routes for local HTTPS or deployment-style testing.
 
 ## Stack
 
@@ -59,7 +69,7 @@ Use `DatabaseUpgrade.sql` only when you need to evolve an existing database with
 
 Copy `backend-services/secrets.properties.example` to `backend-services/secrets.properties` and fill in the values you need.
 
-The backend loads that file automatically through `spring.config.import=optional:file:./secrets.properties`.
+The backend loads that file automatically when started from either `backend-services/` or the repository root.
 
 Minimum local values:
 
@@ -161,6 +171,7 @@ Passwords are bcrypt-hashed in the SQL seed file. If you need the plain-text tes
 - Java 21 can compile the code for local validation with overrides, but the project target remains Java 25.
 - For WSL/Linux runs, use Linux paths such as `/mnt/c/Dev/e_commerce`; do not use PowerShell syntax like `$env:...`.
 - The default media path is relative to `backend-services`, so run the backend from that directory or set `APP_MEDIA_RESOURCE_LOCATION` explicitly.
+- If Redis logs `missing type id property '@class'`, Redis is reachable but contains stale serialized cache entries. Clear local Redis and retry.
 - If the backend fails on startup, first check:
   - JWT secret presence
   - MySQL credentials

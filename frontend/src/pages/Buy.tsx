@@ -37,6 +37,8 @@ const currency = new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 2,
 });
 
+const PENDING_CHECKOUT_ORDER_KEY = "pendingCheckoutOrderId";
+
 interface RowProps {
     label: ReactNode;
     value: ReactNode;
@@ -94,6 +96,9 @@ export default function Buy() {
         try {
             const res = await ApiService.startCheckout();
             if (res?.checkoutUrl) {
+                if (res.orderId) {
+                    sessionStorage.setItem(PENDING_CHECKOUT_ORDER_KEY, String(res.orderId));
+                }
                 window.location.href = res.checkoutUrl;
                 return;
             }

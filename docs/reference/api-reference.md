@@ -9,9 +9,11 @@ This system is a role-based e-commerce app with:
 - JWT auth (`ROLE_USER`, `ROLE_ADMIN`, `ROLE_MANAGER`, optional `ROLE_EMPLOYEE`)
 - Product catalog with category filtering and discounts
 - Cart with additive discount calculation
-- Checkout with pluggable payment gateway (`stripe` or `razorpay`)
+- Checkout with pluggable payment gateway (`stripe`, `razorpay`, or local `loadtest`)
 - Admin/manager user and product management
 - Secure image upload for product media
+- Redis cache-aside reads for high-traffic catalog, review, image, category, role, and cart responses
+- k6 load-test scripts for smoke, browse, authenticated cart, checkout, webhook, mixed, breakpoint, soak, abuse, and upload scenarios
 
 ## 2. Backend Features by Module
 
@@ -46,11 +48,12 @@ This system is a role-based e-commerce app with:
 ### Checkout and Payments
 - `POST /api/v1/checkout` creates order snapshot + payment session.
 - Payment provider selected by config (`app.payment.gateway`).
-- Current providers: Stripe and Razorpay.
+- Current providers: Stripe, Razorpay, and local load-test.
 - Webhook processing endpoint is gateway-agnostic:
   `POST /api/v1/payments/webhook/{gateway}`.
 - Order status polling endpoint:
   `GET /api/v1/checkout/{orderId}`.
+- Cart clearing is driven by a verified successful payment event, not by the browser redirect alone.
 
 ### Media
 - Image upload restricted to admin/manager.
@@ -73,6 +76,7 @@ This system is a role-based e-commerce app with:
 - Protected checkout page.
 - Cart quantity update/remove flows.
 - Checkout initiation via backend payment session URL redirection.
+- Payment success flow returns through the configured provider success URL. Stripe requires webhook forwarding for local payment completion.
 
 ### Admin Flows
 - Admin dashboard with product list and delete action.
@@ -150,7 +154,7 @@ Paginated responses use:
 ## 6. Payment Gateway Configuration
 
 Main switch:
-- `APP_PAYMENT_GATEWAY=stripe` or `razorpay`
+- `APP_PAYMENT_GATEWAY=stripe`, `razorpay`, or `loadtest`
 
 Common:
 - `APP_PAYMENT_DEFAULT_CURRENCY=usd` (or `inr`)
@@ -164,6 +168,12 @@ Razorpay:
 - `APP_RAZORPAY_KEY_ID`
 - `APP_RAZORPAY_KEY_SECRET`
 - `APP_RAZORPAY_WEBHOOK_SECRET`
+
+Load-test gateway:
+- `APP_LOADTEST_PAYMENT_DELAY_MS`
+- `APP_LOADTEST_PAYMENT_FAILURE_RATE`
+- `APP_LOADTEST_PAYMENT_WEBHOOK_SECRET`
+- `APP_LOADTEST_PAYMENT_CHECKOUT_BASE_URL`
 
 ## 7. Frontend Route Map
 

@@ -218,8 +218,20 @@ interface CheckoutResponse {
     expiresAt?: string | null;
 }
 
+interface CheckoutStatusResponse {
+    orderId: number;
+    status: string;
+    paymentStatus: string;
+    message: string;
+}
+
 async function startCheckout(): Promise<CheckoutResponse> {
     const { data } = await api.post<CheckoutResponse>("/checkout", {});
+    return data;
+}
+
+async function getCheckoutStatus(orderId: number | string): Promise<CheckoutStatusResponse> {
+    const { data } = await api.get<CheckoutStatusResponse>(`/checkout/${orderId}`);
     return data;
 }
 
@@ -324,6 +336,7 @@ export default {
     removeCartItem,
     clearCart,
     startCheckout,
+    getCheckoutStatus,
     fetchCategories,
     fetchProducts,
     fetchProduct,

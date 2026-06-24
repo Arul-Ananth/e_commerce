@@ -2,7 +2,7 @@
 
 ## Backend Secrets File
 
-Local backend secrets are loaded from `backend-services/secrets.properties` through `spring.config.import=optional:file:./secrets.properties`.
+Local backend secrets are loaded from `backend-services/secrets.properties` when the backend starts from either `backend-services/` or the repository root.
 
 Start from `backend-services/secrets.properties.example` and fill the values you actually need.
 
@@ -35,6 +35,7 @@ APP_MEDIA_PUBLIC_BASE_URL=http://localhost:8080/images/
 - MySQL remains the source of truth.
 - Default cache TTL is controlled by `APP_CACHE_DEFAULT_TTL_MINUTES`.
 - Cache-specific TTL overrides live in `RedisCacheConfig`.
+- Redis must be reachable from the same environment where the backend process runs. If the backend runs in WSL, Redis on WSL `localhost:6379` is valid. If the backend runs in Windows, Windows must be able to reach Redis.
 - If local Redis contains stale data from an older build, clear it with:
 
 ```bash
@@ -42,6 +43,8 @@ redis-cli flushall
 ```
 
 Use a targeted `DEL` for shared Redis instances instead of `flushall`.
+
+If logs show `missing type id property '@class'`, Redis is active but contains stale serialized entries. Clear local Redis and retry the request.
 
 ## Stripe Settings
 
@@ -122,9 +125,73 @@ Use Linux paths in WSL. For example, use `/mnt/c/Dev/e_commerce/backend-services
 - Fix: create `ecommerce_db` in the MySQL instance used by the backend, then run `DatabaseInit.sql`
 
 ### Redis stale serialization data
-- Symptom: Redis/Jackson cannot deserialize a cached object after code changes
+- Symptom: logs contain `Redis cache get failed`, `Could not read JSON`, or `missing type id property '@class'`
+- Meaning: Redis is reachable, but a cached value was written by an older/incompatible serializer or DTO shape
 - Fix: clear local Redis cache entries and retry the request
 
 ### Java target mismatch
 - Symptom: Maven fails with `release version 25 not supported`
 - Fix: install/configure Java 25 for native project builds
+
+## Current Notes: Load-Test Payment Gateway
+
+Use this local-only gateway for k6 checkout capacity tests. It avoids Stripe/Razorpay network calls and keeps payment behavior controlled on one laptop.
+
+```properties
+APP_PAYMENT_GATEWAY=loadtest
+APP_LOADTEST_PAYMENT_DELAY_MS=50
+APP_LOADTEST_PAYMENT_FAILURE_RATE=0
+APP_LOADTEST_PAYMENT_WEBHOOK_SECRET=loadtest-secret
+APP_LOADTEST_PAYMENT_CHECKOUT_BASE_URL=http://localhost:5173/checkout/loadtest
+```
+
+Restart the backend after changing `APP_PAYMENT_GATEWAY` or any payment gateway secret.
+
+Useful delay/failure sweeps:
+
+```properties
+APP_LOADTEST_PAYMENT_DELAY_MS=50
+APP_LOADTEST_PAYMENT_DELAY_MS=250
+APP_LOADTEST_PAYMENT_DELAY_MS=1000
+APP_LOADTEST_PAYMENT_FAILURE_RATE=0.01
+APP_LOADTEST_PAYMENT_FAILURE_RATE=0.05
+APP_LOADTEST_PAYMENT_FAILURE_RATE=0.20
+```
+
+## Current Notes: Local Metrics During Load Tests
+
+Actuator endpoints are exposed for local test measurement:
+
+```text
+GET /actuator/health
+GET /actuator/metrics
+GET /actuator/prometheus
+```
+
+Useful laptop-local checks while k6 is running:
+
+```bash
+curl http://localhost:8080/actuator/metrics/http.server.requests
+curl http://localhost:8080/actuator/metrics/jvm.memory.used
+curl http://localhost:8080/actuator/metrics/jvm.gc.pause
+curl http://localhost:8080/actuator/metrics/hikaricp.connections.active
+curl http://localhost:8080/actuator/metrics/hikaricp.connections.pending
+redis-cli info stats
+redis-cli info memory
+mysql -h 127.0.0.1 -P 3306 -u root -p -e "SHOW FULL PROCESSLIST; SHOW GLOBAL STATUS LIKE 'Threads_connected'; SHOW GLOBAL STATUS LIKE 'Innodb_row_lock%';"
+```
+
+When testing through Nginx with a self-signed local certificate, pass `--insecure-skip-tls-verify` to k6 and set `BASE_URL=https://localhost`.
+
+## Current Notes: Redis Failure Visibility
+
+The backend keeps serving requests when Redis cache operations fail. This is intentional for availability, but it can hide cache outages if logs and metrics are not watched.
+
+Watch for:
+
+- repeated `Redis cache get failed`, `put failed`, `evict failed`, or `clear failed` warnings
+- Redis availability and latency changes
+- cache hit/miss behavior where available
+- rising MySQL query load and Hikari pending connections while Redis is unhealthy
+
+`RedisCacheManager` is transaction-aware, so cache changes are applied after DB commit instead of during a transaction that may roll back.

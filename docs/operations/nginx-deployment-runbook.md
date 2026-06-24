@@ -9,10 +9,13 @@
 
 ## Template Rendering
 
-The site template contains `__BACKEND_UPSTREAM__` placeholders in both:
+The site template contains one `__BACKEND_UPSTREAM__` placeholder in the named upstream block:
 
-- `/api/`
-- `/auth/`
+```nginx
+upstream commerce_backend {
+  server __BACKEND_UPSTREAM__;
+}
+```
 
 The deploy script reads `BACKEND_UPSTREAM` from `nginx/backend-upstream.conf`, validates the value, and renders the final site file from the template.
 
@@ -37,15 +40,15 @@ BACKEND_UPSTREAM=host:port
 - builds the frontend in WSL
 - copies frontend assets to the deploy directory
 - renders the Nginx template using `BACKEND_UPSTREAM`
-- removes the default Nginx site if present
+- removes stale local site links that previously caused config-test failures
 - optionally validates backend reachability through `/api/v1/products/categories`
 - reloads Nginx when TLS cert files exist
 
 ## Troubleshooting
 
 ### Placeholder validation fails
-- Cause: the template is missing `__BACKEND_UPSTREAM__` in `/api` or `/auth`
-- Fix: verify both proxy blocks use the placeholder before deployment
+- Cause: the template is missing `__BACKEND_UPSTREAM__` in the `commerce_backend` upstream block
+- Fix: verify the upstream block contains the placeholder before deployment
 
 ### Backend probe fails
 - Cause: backend host/port is wrong or backend is not reachable from WSL/Nginx
@@ -54,3 +57,15 @@ BACKEND_UPSTREAM=host:port
 ### TLS reload is skipped
 - Cause: certificate or key file is missing
 - Fix: place the certificate files at the configured `commerce-platform` paths
+
+## Current Notes: Load-Test Timing
+
+For Nginx-vs-backend attribution during k6 runs, the default access log now includes upstream timing fields.
+
+Useful fields:
+
+```nginx
+$request_time $upstream_response_time $upstream_status
+```
+
+Run direct backend tests first with `BASE_URL=http://localhost:8080`, then repeat through Nginx by changing only `BASE_URL`.

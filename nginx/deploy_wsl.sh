@@ -107,6 +107,7 @@ sudo rsync -a --delete "${BUILD_DIR}/" "${DEPLOY_DIR}/"
 echo "==> Linking Nginx configuration"
 sudo mkdir -p /etc/nginx/conf.d /etc/nginx/certs
 sudo ln -sf "${NGINX_CONF_SRC}" "${NGINX_CONF_DST}"
+sudo rm -f /etc/nginx/conf.d/ecommerce.conf /etc/nginx/sites-enabled/ecommerce.conf /etc/nginx/sites-enabled/default
 
 if [[ ! -f "${BACKEND_CFG}" ]]; then
   echo "Missing ${BACKEND_CFG}"
@@ -195,8 +196,8 @@ if [[ "${EFFECTIVE_BACKEND_UPSTREAM}" != "${BACKEND_UPSTREAM}" ]]; then
 fi
 
 placeholder_count="$( (grep -o '__BACKEND_UPSTREAM__' "${NGINX_SITE_SRC}" || true) | wc -l | tr -d ' ' )"
-if [[ "${placeholder_count}" -lt 2 ]]; then
-  echo "Template ${NGINX_SITE_SRC} must contain __BACKEND_UPSTREAM__ placeholder in /api and /auth."
+if [[ "${placeholder_count}" -lt 1 ]]; then
+  echo "Template ${NGINX_SITE_SRC} must contain __BACKEND_UPSTREAM__ in the upstream block."
   exit 1
 fi
 
@@ -206,10 +207,6 @@ sed "s|__BACKEND_UPSTREAM__|${EFFECTIVE_BACKEND_UPSTREAM}|g" "${NGINX_SITE_SRC}"
 sudo cp "${tmp_site}" "${NGINX_SITE_DST}"
 rm -f "${tmp_site}"
 echo "==> Rendered ${NGINX_SITE_DST} from template"
-
-if [[ -f /etc/nginx/sites-enabled/default ]]; then
-  sudo rm -f /etc/nginx/sites-enabled/default
-fi
 
 if [[ -f "${CERT_PATH}" && -f "${KEY_PATH}" ]]; then
   echo "==> Testing and reloading Nginx"

@@ -17,6 +17,8 @@ Write flow:
 2. After a successful mutation, evict related Redis caches.
 3. Do not rely on TTL for correctness.
 
+Redis failures are not treated as application-fatal. The custom cache error handler logs cache get/put/evict/clear failures and lets the request continue against MySQL-backed service logic.
+
 ## Cache Names
 
 - `products`
@@ -54,6 +56,24 @@ Current cached reads include:
 - user cart responses
 
 Avoid caching passwords, JWTs, payment secrets, or mutable JPA entities.
+
+## Stale Cache Entries
+
+Redis may contain entries written by an older serializer or an older DTO shape. A common local symptom is:
+
+```text
+Redis cache get failed ... Could not read JSON ... missing type id property '@class'
+```
+
+This means Redis is reachable and returned data, but the backend cannot deserialize that cached value. It is not a Redis availability failure.
+
+For local development, clear stale entries:
+
+```bash
+redis-cli flushall
+```
+
+For shared Redis instances, delete only this app's affected cache keys instead of flushing the whole instance.
 
 ## Data That Must Stay Durable in MySQL
 
@@ -98,6 +118,8 @@ node -v
 npm -v
 ```
 
+If Redis runs in WSL but the backend runs in Windows, `localhost` may refer to different loopback interfaces. In that split setup, either run Redis and backend in the same environment or set `SPRING_DATA_REDIS_HOST` to an address the backend process can reach.
+
 If the backend reports `Unknown database 'ecommerce_db'`, create and initialize the WSL MySQL database:
 
 ```bash
@@ -112,3 +134,12 @@ If static images return `NoResourceFoundException`, verify the backend was start
 export APP_MEDIA_RESOURCE_LOCATION=file:/mnt/c/Dev/e_commerce/imageResource/
 export APP_MEDIA_UPLOAD_DIR=/mnt/c/Dev/e_commerce/imageResource/
 ```
+
+## Current Notes: Phase 2 Redis Safety
+
+- `RedisCacheManager` is transaction-aware so cache writes and evictions are deferred until the surrounding DB transaction commits.
+- This prevents Redis from being updated or evicted for a database-backed change that later rolls back.
+- The custom `CacheErrorHandler` intentionally keeps the application available when Redis fails by logging warnings and falling back to MySQL-backed execution.
+- Do not remove the error handler without a separate availability decision.
+- Add monitoring or alerts for Redis cache errors, Redis availability, cache hit/miss behavior where available, and DB load when Redis is unavailable.
+- During load tests, check Redis stats and DB pressure together so Redis outages do not stay hidden as warning-only log noise.
