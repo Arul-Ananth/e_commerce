@@ -55,7 +55,7 @@ function Row({ label, value }: RowProps) {
 
 export default function Buy() {
     const navigate = useNavigate();
-    const { cartItems, updateQuantity, removeFromCart, clear, loading } = useCart();
+    const { cartItems, updateQuantity, removeFromCart, loading } = useCart();
     const { isAuthenticated } = useAuth();
 
     const [placing, setPlacing] = useState(false);

@@ -56,10 +56,10 @@ public class CheckoutControllerIT extends IntegrationTestBase {
         String token = tokenFor(user);
         Product product = createProduct("Camera", 299.99, "Electronics");
 
-        Cart cart = cartRepository.save(new Cart(user));
+        Cart cart = cartRepository.save(new Cart(user.getId()));
         CartItem item = new CartItem();
         item.setCart(cart);
-        item.setProduct(product);
+        item.setProductId(product.getId());
         item.setQuantity(1);
         cartItemRepository.save(item);
 

@@ -1,8 +1,8 @@
 import http from 'k6/http';
-import { check, fail, sleep } from 'k6';
+import { check, sleep } from 'k6';
 import { SharedArray } from 'k6/data';
 
-import { BASE_URL, envNumber, extractQueryParam, jsonHeaders, parseCsv, pickWeighted } from '../lib/config.js';
+import { BASE_URL, envNumber, extractQueryParam, jsonHeaders, parseCsv, pickWeighted, validateVuCapacity } from '../lib/config.js';
 import { ensureUser, login } from '../lib/auth.js';
 import { checkout, buildLoadtestWebhook, postLoadtestWebhook } from '../lib/payment.js';
 import { chooseProduct, fetchProducts } from '../lib/products.js';
@@ -28,10 +28,11 @@ export const options = {
 };
 
 export function setup() {
-  const requestedVus = envNumber('MIXED_VUS', 25);
-  if (requestedVus > users.length) {
-    fail(`MIXED_VUS=${requestedVus} exceeds users.csv count=${users.length}.`);
-  }
+  return setupMixed(envNumber('MIXED_VUS', 25), 'MIXED_VUS');
+}
+
+export function setupMixed(requestedVus, envName = 'MIXED_VUS') {
+  validateVuCapacity(envName, requestedVus, users);
   return {
     tokens: users.map((user) => {
       ensureUser(user);

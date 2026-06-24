@@ -1,8 +1,6 @@
 package com.ecommerce.platform.modules.cart.model;
 
 import jakarta.persistence.*;
-import com.ecommerce.platform.modules.catalog.model.Discount;
-import com.ecommerce.platform.modules.catalog.model.Product;
 
 @Entity
 @Table(name = "cart_items", uniqueConstraints = @UniqueConstraint(columnNames = {"cart_id", "product_id"}))
@@ -18,13 +16,11 @@ public class CartItem {
     @JoinColumn(name = "cart_id")
     private Cart cart;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @Column(name = "product_id", nullable = false)
+    private Long productId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "discount_id")
-    private Discount selectedDiscount;
+    @Column(name = "discount_id")
+    private Long selectedDiscountId;
 
     @Column(nullable = false)
     private int quantity;
@@ -45,20 +41,20 @@ public class CartItem {
         this.cart = cart;
     }
 
-    public Product getProduct() {
-        return product;
+    public Long getProductId() {
+        return productId;
     }
 
-    public void setProduct(Product product) {
-        this.product = product;
+    public void setProductId(Long productId) {
+        this.productId = productId;
     }
 
-    public Discount getSelectedDiscount() {
-        return selectedDiscount;
+    public Long getSelectedDiscountId() {
+        return selectedDiscountId;
     }
 
-    public void setSelectedDiscount(Discount selectedDiscount) {
-        this.selectedDiscount = selectedDiscount;
+    public void setSelectedDiscountId(Long selectedDiscountId) {
+        this.selectedDiscountId = selectedDiscountId;
     }
 
     public int getQuantity() {

@@ -122,7 +122,8 @@ public class UserControllerIT extends IntegrationTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.email", is("manager-new@example.com")));
+                .andExpect(jsonPath("$.email", is("manager-new@example.com")))
+                .andExpect(jsonPath("$.roles", hasItem("ROLE_MANAGER")));
     }
 
     @Test

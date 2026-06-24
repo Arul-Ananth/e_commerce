@@ -1,9 +1,10 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { SharedArray } from 'k6/data';
-import { BASE_URL, randomItem } from '../lib/config.js';
+import { BASE_URL, envNumber } from '../lib/config.js';
+import { chooseProduct, fetchProducts } from '../lib/products.js';
 
-const products = new SharedArray('products', () => JSON.parse(open('../data/products.json')));
+const fallbackProducts = new SharedArray('products', () => JSON.parse(open('../data/products.json')));
 
 export const options = {
   scenarios: {
@@ -22,8 +23,14 @@ export const options = {
   },
 };
 
-export default function () {
-  const product = randomItem(products);
+export function setup() {
+  return {
+    products: fetchProducts(envNumber('PRODUCT_FETCH_PAGES', 5), envNumber('PRODUCT_FETCH_SIZE', 100)),
+  };
+}
+
+export default function (data) {
+  const product = chooseProduct(data.products, fallbackProducts);
 
   const list = http.get(`${BASE_URL}/api/v1/products?page=0&size=20`);
   check(list, {

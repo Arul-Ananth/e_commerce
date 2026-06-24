@@ -1,4 +1,5 @@
-import { setup, default as mixedDefault } from './mixed.js';
+import { envNumber } from '../lib/config.js';
+import { setupMixed, default as mixedDefault } from './mixed.js';
 
 export const options = {
   scenarios: {
@@ -14,7 +15,9 @@ export const options = {
   },
 };
 
-export { setup };
+export function setup() {
+  return setupMixed(envNumber('SOAK_VUS', envNumber('MIXED_VUS', 25)), 'SOAK_VUS');
+}
 
 export default function (data) {
   mixedDefault(data);

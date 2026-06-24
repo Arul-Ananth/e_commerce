@@ -1,11 +1,12 @@
 import http from 'k6/http';
-import { check, fail, sleep } from 'k6';
+import { check, sleep } from 'k6';
 import { SharedArray } from 'k6/data';
-import { BASE_URL, jsonHeaders, parseCsv, randomItem } from '../lib/config.js';
+import { BASE_URL, envNumber, jsonHeaders, parseCsv, validateVuCapacity } from '../lib/config.js';
 import { ensureUser, login } from '../lib/auth.js';
+import { chooseProduct, fetchProducts } from '../lib/products.js';
 
 const users = new SharedArray('users', () => parseCsv(open('../data/users.csv')));
-const products = new SharedArray('products', () => JSON.parse(open('../data/products.json')));
+const fallbackProducts = new SharedArray('products', () => JSON.parse(open('../data/products.json')));
 
 export const options = {
   scenarios: {
@@ -25,22 +26,20 @@ export const options = {
 };
 
 export function setup() {
-  const requestedVus = Number(__ENV.CART_VUS || 10);
-  if (requestedVus > users.length) {
-    fail(`CART_VUS=${requestedVus} exceeds users.csv count=${users.length}. Add users or lower CART_VUS.`);
-  }
+  validateVuCapacity('CART_VUS', envNumber('CART_VUS', 10), users);
 
   return {
     tokens: users.map((user) => {
       ensureUser(user);
       return login(user);
     }),
+    products: fetchProducts(envNumber('PRODUCT_FETCH_PAGES', 5), envNumber('PRODUCT_FETCH_SIZE', 100)),
   };
 }
 
 export default function (data) {
   const token = data.tokens[(__VU - 1) % data.tokens.length];
-  const product = randomItem(products);
+  const product = chooseProduct(data.products, fallbackProducts);
   const params = jsonHeaders(token);
 
   const cart = http.get(`${BASE_URL}/api/v1/cart`, params);

@@ -1,8 +1,6 @@
 package com.ecommerce.platform.modules.reviews.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import com.ecommerce.platform.modules.catalog.model.Product;
 
 import java.time.Instant;
 
@@ -20,10 +18,8 @@ public class Review {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
-    @JsonIgnore
-    private Product product;
+    @Column(name = "product_id")
+    private Long productId;
 
     // --- Getters and Setters ---
 
@@ -59,12 +55,12 @@ public class Review {
         this.rating = rating;
     }
 
-    public Product getProduct() {
-        return product;
+    public Long getProductId() {
+        return productId;
     }
 
-    public void setProduct(Product product) {
-        this.product = product;
+    public void setProductId(Long productId) {
+        this.productId = productId;
     }
 
     public Instant getCreatedAt() {

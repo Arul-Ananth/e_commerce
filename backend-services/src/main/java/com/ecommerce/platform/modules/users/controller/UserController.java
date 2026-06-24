@@ -4,11 +4,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import com.ecommerce.platform.common.dto.PageResponse;
-import com.ecommerce.platform.modules.auth.dto.AuthResponse;
-import com.ecommerce.platform.modules.auth.dto.SignupRequest;
-import com.ecommerce.platform.modules.auth.service.AuthService;
 import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
+import com.ecommerce.platform.modules.users.api.UserAccountApi;
+import com.ecommerce.platform.modules.users.api.UserRegistrationRequest;
 import com.ecommerce.platform.modules.users.dto.UserAdminDto;
+import com.ecommerce.platform.modules.users.dto.request.CreateManagerRequest;
 import com.ecommerce.platform.modules.users.dto.request.ToggleEmployeeRoleRequest;
 import com.ecommerce.platform.modules.users.dto.request.UpdateUserDiscountRequest;
 import com.ecommerce.platform.modules.users.service.UserService;
@@ -24,11 +24,11 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-    private final AuthService authService;
+    private final UserAccountApi userAccountApi;
 
-    public UserController(UserService userService, AuthService authService) {
+    public UserController(UserService userService, UserAccountApi userAccountApi) {
         this.userService = userService;
-        this.authService = authService;
+        this.userAccountApi = userAccountApi;
     }
 
     @GetMapping
@@ -79,7 +79,9 @@ public class UserController {
 
     @PostMapping("/managers")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponse> createManager(@Valid @RequestBody SignupRequest req) {
-        return ResponseEntity.ok(authService.registerManager(req));
+    public ResponseEntity<UserAdminDto> createManager(@Valid @RequestBody CreateManagerRequest req) {
+        return ResponseEntity.ok(userAccountApi.createManager(
+                new UserRegistrationRequest(req.email(), req.password(), req.username())
+        ));
     }
 }

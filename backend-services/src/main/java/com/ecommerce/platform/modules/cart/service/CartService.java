@@ -10,11 +10,9 @@ import com.ecommerce.platform.modules.cart.model.Cart;
 import com.ecommerce.platform.modules.cart.model.CartItem;
 import com.ecommerce.platform.modules.cart.repository.CartItemRepository;
 import com.ecommerce.platform.modules.cart.repository.CartRepository;
-import com.ecommerce.platform.modules.catalog.model.Discount;
-import com.ecommerce.platform.modules.catalog.model.Product;
-import com.ecommerce.platform.modules.catalog.service.ProductService;
-import com.ecommerce.platform.modules.users.model.User;
-import jakarta.persistence.EntityManager;
+import com.ecommerce.platform.modules.catalog.api.CatalogApi;
+import com.ecommerce.platform.modules.catalog.api.CatalogCartProduct;
+import com.ecommerce.platform.modules.catalog.api.CatalogDiscount;
 import jakarta.persistence.OptimisticLockException;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -30,10 +28,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class CartService {
@@ -44,19 +42,16 @@ public class CartService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductService productService;
-    private final EntityManager entityManager;
+    private final CatalogApi catalogApi;
     private final TransactionTemplate transactionTemplate;
 
     public CartService(CartRepository cartRepository,
                        CartItemRepository cartItemRepository,
-                       ProductService productService,
-                       EntityManager entityManager,
+                       CatalogApi catalogApi,
                        PlatformTransactionManager transactionManager) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
-        this.productService = productService;
-        this.entityManager = entityManager;
+        this.catalogApi = catalogApi;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -91,7 +86,7 @@ public class CartService {
     @Transactional
     @CacheEvict(cacheNames = CacheNames.USER_CART, key = "#userId")
     public void clearByUserId(Long userId) {
-        Cart cart = cartRepository.findByUserId(userId).orElse(null);
+        Cart cart = cartRepository.findByUserIdForUpdate(userId).orElse(null);
         if (cart != null) {
             cartItemRepository.deleteByCartId(cart.getId());
         }
@@ -108,20 +103,20 @@ public class CartService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be > 0");
         }
 
-        Cart cart = getOrCreateCart(user.getId());
-        Product product = productService.getProductForCartMutationById(productId);
+        Cart cart = getOrCreateCartForMutation(user.getId());
+        catalogApi.requireProductExists(productId);
 
         CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId).orElse(null);
         if (item == null) {
             item = new CartItem();
             item.setCart(cart);
-            item.setProduct(product);
+            item.setProductId(productId);
             item.setQuantity(quantity);
-            item.setSelectedDiscount(resolveSelectedDiscount(product, discountId, true));
+            item.setSelectedDiscountId(resolveSelectedDiscountId(productId, discountId, true));
         } else {
             item.setQuantity(item.getQuantity() + quantity);
             if (discountId != null) {
-                item.setSelectedDiscount(resolveSelectedDiscount(product, discountId, false));
+                item.setSelectedDiscountId(resolveSelectedDiscountId(productId, discountId, false));
             }
         }
 
@@ -131,7 +126,7 @@ public class CartService {
 
     @Transactional
     protected CartResponse setQuantityInTransaction(AuthenticatedUser user, Long productId, int quantity) {
-        Cart cart = getOrCreateCart(user.getId());
+        Cart cart = getOrCreateCartForMutation(user.getId());
         CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
 
@@ -147,44 +142,59 @@ public class CartService {
 
     @Transactional
     protected CartResponse removeItemInTransaction(AuthenticatedUser user, Long productId) {
-        Cart cart = getOrCreateCart(user.getId());
+        Cart cart = getOrCreateCartForMutation(user.getId());
         cartItemRepository.deleteByCartIdAndProductId(cart.getId(), productId);
         return buildCartResponse(user);
     }
 
     @Transactional
     protected CartResponse updateItemDiscountInTransaction(AuthenticatedUser user, Long productId, Long discountId) {
-        Cart cart = getOrCreateCart(user.getId());
-        Product product = productService.getProductForCartMutationById(productId);
+        Cart cart = getOrCreateCartForMutation(user.getId());
+        catalogApi.requireProductExists(productId);
         CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not in cart"));
 
-        item.setSelectedDiscount(resolveSelectedDiscount(product, discountId, false));
+        item.setSelectedDiscountId(resolveSelectedDiscountId(productId, discountId, false));
         cartItemRepository.saveAndFlush(item);
         return buildCartResponse(user);
     }
 
-    private Cart getOrCreateCart(Long userId) {
-        return cartRepository.findByUserId(userId).orElseGet(() -> createCart(userId));
+    private Cart getOrCreateCartForMutation(Long userId) {
+        return cartRepository.findByUserIdForUpdate(userId).orElseGet(() -> createCart(userId));
     }
 
     private Cart createCart(Long userId) {
         try {
             Cart cart = new Cart();
-            cart.setUser(entityManager.getReference(User.class, userId));
+            cart.setUserId(userId);
             return cartRepository.saveAndFlush(cart);
         } catch (DataIntegrityViolationException ex) {
-            return cartRepository.findByUserId(userId).orElseThrow(() -> ex);
+            return cartRepository.findByUserIdForUpdate(userId).orElseThrow(() -> ex);
         }
     }
 
     private CartResponse buildCartResponse(AuthenticatedUser user) {
-        List<CartItemView> items = cartItemRepository.findResponseViewsByUserId(user.getId());
+        List<CartItem> cartItems = cartItemRepository.findByUserIdOrderById(user.getId());
+        List<Long> productIds = cartItems.stream().map(CartItem::getProductId).distinct().toList();
+        Map<Long, CatalogCartProduct> products = catalogApi.getProductsForCart(productIds);
+        Map<Long, CatalogDiscount> discounts = catalogApi.getDiscountsById(
+                cartItems.stream()
+                        .map(CartItem::getSelectedDiscountId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList()
+        );
+
+        List<CartItemView> items = cartItems.stream()
+                .map(item -> toCartItemView(item, products.get(item.getProductId()), discounts.get(item.getSelectedDiscountId())))
+                .filter(Objects::nonNull)
+                .toList();
+
         if (items.isEmpty()) {
             return new CartResponse(List.of());
         }
 
-        Map<Long, String> primaryImages = new LinkedHashMap<>(productService.getPrimaryImagesByProductIds(
+        Map<Long, String> primaryImages = new LinkedHashMap<>(catalogApi.getPrimaryImagesByProductIds(
                 items.stream().map(CartItemView::productId).distinct().toList()
         ));
 
@@ -194,9 +204,26 @@ public class CartService {
         return new CartResponse(itemDtos);
     }
 
+    private CartItemView toCartItemView(CartItem item, CatalogCartProduct product, CatalogDiscount discount) {
+        if (product == null) {
+            return null;
+        }
+        return new CartItemView(
+                product.id(),
+                product.name(),
+                product.price(),
+                item.getQuantity(),
+                discount != null ? discount.id() : null,
+                discount != null ? discount.description() : null,
+                discount != null ? discount.percentage() : null,
+                discount != null ? discount.startDate() : null,
+                discount != null ? discount.endDate() : null
+        );
+    }
+
     private CartItemDto toCartItemDto(CartItemView item, String primaryImageUrl, AuthenticatedUser user) {
-        Discount activeSelected = getActiveSelectedDiscount(item);
-        BigDecimal productDiscountPercentage = activeSelected != null ? activeSelected.getPercentage() : BigDecimal.ZERO;
+        CatalogDiscount activeSelected = getActiveSelectedDiscount(item);
+        BigDecimal productDiscountPercentage = activeSelected != null ? activeSelected.percentage() : BigDecimal.ZERO;
         BigDecimal userDiscountPercentage = getActiveUserDiscountPercentage(user);
         BigDecimal employeeDiscountPercentage = isEmployee(user)
                 ? EMPLOYEE_DISCOUNT_PERCENTAGE
@@ -236,46 +263,37 @@ public class CartService {
         return basePrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private Discount resolveSelectedDiscount(Product product, Long discountId, boolean applyBestIfMissing) {
+    private Long resolveSelectedDiscountId(Long productId, Long discountId, boolean applyBestIfMissing) {
         if (discountId == null) {
-            return applyBestIfMissing ? getBestActiveDiscount(product) : null;
+            CatalogDiscount discount = applyBestIfMissing ? catalogApi.getBestActiveDiscount(productId) : null;
+            return discount != null ? discount.id() : null;
         }
         if (discountId == 0) {
             return null;
         }
-        return product.getDiscounts().stream()
-                .filter(d -> d.getId().equals(discountId))
-                .filter(this::isDiscountActive)
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or inactive discount"));
+        return catalogApi.getActiveDiscount(productId, discountId).id();
     }
 
-    private Discount getBestActiveDiscount(Product product) {
-        return product.getDiscounts().stream()
-                .filter(this::isDiscountActive)
-                .max(Comparator.comparing(Discount::getPercentage))
-                .orElse(null);
-    }
-
-    private Discount getActiveSelectedDiscount(CartItemView selected) {
+    private CatalogDiscount getActiveSelectedDiscount(CartItemView selected) {
         if (selected.selectedDiscountId() == null) {
             return null;
         }
-        Discount discount = new Discount();
-        discount.setId(selected.selectedDiscountId());
-        discount.setDescription(selected.selectedDiscountDescription());
-        discount.setPercentage(selected.selectedDiscountPercentage());
-        discount.setStartDate(selected.selectedDiscountStartDate());
-        discount.setEndDate(selected.selectedDiscountEndDate());
+        CatalogDiscount discount = new CatalogDiscount(
+                selected.selectedDiscountId(),
+                selected.selectedDiscountDescription(),
+                selected.selectedDiscountPercentage(),
+                selected.selectedDiscountStartDate(),
+                selected.selectedDiscountEndDate()
+        );
         return isDiscountActive(discount) ? discount : null;
     }
 
-    private boolean isDiscountActive(Discount discount) {
+    private boolean isDiscountActive(CatalogDiscount discount) {
         LocalDate today = LocalDate.now();
-        if (discount.getStartDate() != null && discount.getStartDate().isAfter(today)) {
+        if (discount.startDate() != null && discount.startDate().isAfter(today)) {
             return false;
         }
-        if (discount.getEndDate() != null && discount.getEndDate().isBefore(today)) {
+        if (discount.endDate() != null && discount.endDate().isBefore(today)) {
             return false;
         }
         return true;
@@ -304,16 +322,16 @@ public class CartService {
         return percentage;
     }
 
-    private CartItemDiscountDto mapDiscount(Discount discount) {
+    private CartItemDiscountDto mapDiscount(CatalogDiscount discount) {
         if (discount == null) {
             return null;
         }
         return new CartItemDiscountDto(
-                discount.getId(),
-                discount.getDescription(),
-                discount.getPercentage(),
-                discount.getStartDate(),
-                discount.getEndDate()
+                discount.id(),
+                discount.description(),
+                discount.percentage(),
+                discount.startDate(),
+                discount.endDate()
         );
     }
 
@@ -322,7 +340,7 @@ public class CartService {
         for (int attempt = 1; attempt <= MAX_MUTATION_ATTEMPTS; attempt++) {
             try {
                 return transactionTemplate.execute(status -> mutation.execute());
-            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException ex) {
+            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException | DataIntegrityViolationException ex) {
                 lastFailure = ex;
             }
         }

@@ -2,7 +2,7 @@ package com.ecommerce.platform.modules.reviews.service;
 
 import com.ecommerce.platform.config.CacheNames;
 import com.ecommerce.platform.common.dto.PageResponse;
-import com.ecommerce.platform.modules.catalog.service.ProductService;
+import com.ecommerce.platform.modules.catalog.api.CatalogApi;
 import com.ecommerce.platform.modules.reviews.dto.request.AddReviewRequest;
 import com.ecommerce.platform.modules.reviews.dto.response.ReviewResponse;
 import com.ecommerce.platform.modules.reviews.model.Review;
@@ -19,11 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
-    private final ProductService productService;
+    private final CatalogApi catalogApi;
 
-    public ReviewService(ReviewRepository reviewRepository, ProductService productService) {
+    public ReviewService(ReviewRepository reviewRepository, CatalogApi catalogApi) {
         this.reviewRepository = reviewRepository;
-        this.productService = productService;
+        this.catalogApi = catalogApi;
     }
 
     @Transactional(readOnly = true)
@@ -40,10 +40,10 @@ public class ReviewService {
     @Transactional
     @CacheEvict(cacheNames = CacheNames.PRODUCT_REVIEWS, allEntries = true)
     public ReviewResponse addReview(Long productId, AddReviewRequest request, String displayName) {
-        var product = productService.getProductEntityById(productId);
+        catalogApi.requireProductExists(productId);
 
         var review = new Review();
-        review.setProduct(product);
+        review.setProductId(productId);
         review.setUser(displayName);
         review.setRating(request.rating());
         review.setComment(request.comment());
@@ -57,7 +57,7 @@ public class ReviewService {
                 review.getUser(),
                 review.getComment(),
                 review.getRating(),
-                review.getProduct() != null ? review.getProduct().getId() : null,
+                review.getProductId(),
                 review.getCreatedAt()
         );
     }

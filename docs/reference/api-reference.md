@@ -121,14 +121,14 @@ Paginated responses use:
 | DELETE | `/api/v1/cart` | Authenticated | Clear cart. |
 | POST | `/api/v1/checkout` | Authenticated | Create checkout order + payment session URL. |
 | GET | `/api/v1/checkout/{orderId}` | Authenticated | Get checkout/payment status for own order (admin can view any). |
-| POST | `/api/v1/payments/webhook/{gateway}` | Public | Verify/process provider webhook event (`stripe`, `razorpay`). |
+| POST | `/api/v1/payments/webhook/{gateway}` | Public | Verify/process provider webhook event (`stripe`, `razorpay`, local `loadtest`). |
 | GET | `/api/v1/users` | Admin/Manager | Paginated user list. |
 | PATCH | `/api/v1/users/{id}/flag` | Manager | Flag user (manager restrictions enforced). |
 | PATCH | `/api/v1/users/{id}/unflag` | Admin | Unflag user. |
 | DELETE | `/api/v1/users/{id}` | Admin | Delete user. |
 | PATCH | `/api/v1/users/{id}/discount` | Admin/Manager | Set user discount percentage + date range. |
 | PATCH | `/api/v1/users/{id}/employee` | Admin | Add/remove employee role. |
-| POST | `/api/v1/users/managers` | Admin | Create manager account. |
+| POST | `/api/v1/users/managers` | Admin | Create manager account and return a user/admin DTO. |
 | POST | `/api/v1/images/upload` | Admin/Manager | Upload product image and return public URL. |
 | GET | `/images/{file}` | Public | Serve uploaded image resource. |
 

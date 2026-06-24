@@ -3,7 +3,7 @@ import { check, sleep } from 'k6';
 import { Trend } from 'k6/metrics';
 import { SharedArray } from 'k6/data';
 
-import { BASE_URL, envNumber, jsonHeaders, parseCsv, randomItem } from '../lib/config.js';
+import { BASE_URL, envNumber, jsonHeaders, parseCsv, randomItem, validateVuCapacity } from '../lib/config.js';
 import { ensureUser } from '../lib/auth.js';
 
 const users = new SharedArray('users', () => parseCsv(open('../data/users.csv')));
@@ -27,6 +27,7 @@ export const options = {
 };
 
 export function setup() {
+  validateVuCapacity('AUTH_VUS', envNumber('AUTH_VUS', 25), users);
   users.forEach((user) => ensureUser(user));
 }
 

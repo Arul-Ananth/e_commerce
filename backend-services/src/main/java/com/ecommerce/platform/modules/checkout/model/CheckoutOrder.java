@@ -1,7 +1,6 @@
 package com.ecommerce.platform.modules.checkout.model;
 
 import jakarta.persistence.*;
-import com.ecommerce.platform.modules.users.model.User;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,9 +17,8 @@ public class CheckoutOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -58,12 +56,12 @@ public class CheckoutOrder {
         return id;
     }
 
-    public User getUser() {
-        return user;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public OrderStatus getStatus() {

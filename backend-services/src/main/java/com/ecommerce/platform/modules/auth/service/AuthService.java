@@ -4,119 +4,62 @@ import com.ecommerce.platform.modules.auth.dto.AuthResponse;
 import com.ecommerce.platform.modules.auth.dto.SignupRequest;
 import com.ecommerce.platform.modules.auth.dto.UserDto;
 import com.ecommerce.platform.modules.auth.security.JwtService;
-import com.ecommerce.platform.modules.users.model.Role;
-import com.ecommerce.platform.modules.users.model.User;
-import com.ecommerce.platform.modules.users.repository.RoleRepository;
-import com.ecommerce.platform.modules.users.repository.UserRepository;
+import com.ecommerce.platform.modules.users.api.UserAccountApi;
+import com.ecommerce.platform.modules.users.api.UserIdentity;
+import com.ecommerce.platform.modules.users.api.UserRegistrationRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Service
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final JwtService jwtService;
-    private final PasswordEncoder passwordEncoder;
+    private final UserAccountApi userAccountApi;
 
-    public AuthService(UserRepository userRepository,
-                       RoleRepository roleRepository,
-                       JwtService jwtService,
-                       PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
+    public AuthService(JwtService jwtService, UserAccountApi userAccountApi) {
         this.jwtService = jwtService;
-        this.passwordEncoder = passwordEncoder;
+        this.userAccountApi = userAccountApi;
     }
 
     public AuthResponse signup(SignupRequest req) {
-        if (req.email() == null || req.email().isBlank() ||
-                req.password() == null || req.password().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password are required");
-        }
-        if (userRepository.existsByEmail(req.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
-        }
-
-        var user = new User();
-        user.setEmail(req.email());
-        user.setPassword(passwordEncoder.encode(req.password()));
-        user.setDisplayName(resolveDisplayName(req, req.email().split("@")[0]));
-
-        var userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role 'ROLE_USER' is not found"));
-
-        var roles = new HashSet<Role>();
-        roles.add(userRole);
-        user.setRoles(roles);
-
-        user = userRepository.save(user);
-        var token = jwtService.generateToken(user);
+        UserIdentity user = userAccountApi.registerUser(toRegistrationRequest(req));
+        String token = jwtService.generateToken(user);
         return new AuthResponse(token, mapToDto(user));
     }
 
     public AuthResponse login(String email, String password) {
-        var user = userRepository.findByEmailWithRoles(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+        UserIdentity user = userAccountApi.loadByEmailForLogin(email);
 
         enforceAccountActive(user);
 
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        if (!userAccountApi.passwordMatches(password, user)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        var token = jwtService.generateToken(user);
+        String token = jwtService.generateToken(user);
         return new AuthResponse(token, mapToDto(user));
     }
 
-    public AuthResponse registerManager(SignupRequest req) {
-        if (userRepository.existsByEmail(req.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
-        }
-
-        var user = new User();
-        user.setEmail(req.email());
-        user.setPassword(passwordEncoder.encode(req.password()));
-        user.setDisplayName(resolveDisplayName(req, "Manager"));
-
-        var managerRole = roleRepository.findByName("ROLE_MANAGER")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role 'ROLE_MANAGER' is not found"));
-
-        user.setRoles(Set.of(managerRole));
-        user = userRepository.save(user);
-
-        var token = jwtService.generateToken(user);
-        return new AuthResponse(token, mapToDto(user));
-    }
-
-    private void enforceAccountActive(User user) {
-        if (!user.isEnabled() || !user.isAccountNonLocked()) {
+    private void enforceAccountActive(UserIdentity user) {
+        if (!user.enabled() || !user.accountNonLocked()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is disabled or locked");
         }
     }
 
-    private UserDto mapToDto(User user) {
-        var roleNames = user.getRoles().stream().map(Role::getName).toList();
+    private UserDto mapToDto(UserIdentity user) {
         return new UserDto(
-                user.getId(),
-                user.getEmail(),
-                user.getDisplayName(),
-                roleNames,
-                user.getUserDiscountPercentage(),
-                user.getUserDiscountStartDate(),
-                user.getUserDiscountEndDate()
+                user.id(),
+                user.email(),
+                user.displayName(),
+                user.roles(),
+                user.userDiscountPercentage(),
+                user.userDiscountStartDate(),
+                user.userDiscountEndDate()
         );
     }
 
-    private String resolveDisplayName(SignupRequest request, String fallback) {
-        if (request.username() instanceof String requestedDisplayName && !requestedDisplayName.isBlank()) {
-            return requestedDisplayName;
-        }
-        return fallback;
+    private UserRegistrationRequest toRegistrationRequest(SignupRequest request) {
+        return new UserRegistrationRequest(request.email(), request.password(), request.username());
     }
 }

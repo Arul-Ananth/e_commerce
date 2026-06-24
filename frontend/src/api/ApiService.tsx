@@ -65,14 +65,7 @@ function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
 
 export async function fetchCategories(): Promise<string[]> {
     try {
-        const res = await fetch(`${API_PREFIX}/products/categories`);
-        if (!res.ok) {
-            throw new Error("Failed to fetch categories");
-        }
-        if (!res.headers.get("content-type")?.includes("application/json")) {
-            throw new Error("Categories endpoint returned non-JSON response");
-        }
-        const data: unknown = await res.json();
+        const { data } = await api.get<unknown>("/products/categories");
         if (!Array.isArray(data)) {
             return ["All"];
         }
@@ -86,21 +79,12 @@ export async function fetchCategories(): Promise<string[]> {
 
 export async function fetchProducts(category: string): Promise<Product[]> {
     try {
-        const params = new URLSearchParams({ page: "0", size: "100" });
+        const params: { page: number; size: number; category?: string } = { page: 0, size: 100 };
         if (category && category !== "All") {
-            params.set("category", category);
+            params.category = category;
         }
 
-        const url = `${API_PREFIX}/products?${params.toString()}`;
-        const res = await fetch(url);
-        if (!res.ok) {
-            throw new Error("Failed to fetch products");
-        }
-        if (!res.headers.get("content-type")?.includes("application/json")) {
-            throw new Error("Products endpoint returned non-JSON response");
-        }
-
-        const data = (await res.json()) as PagedResponse<Product> | Product[];
+        const { data } = await api.get<PagedResponse<Product> | Product[]>("/products", { params });
         if (Array.isArray(data)) {
             return data;
         }
@@ -118,12 +102,8 @@ export async function fetchProduct(id: number | string | undefined): Promise<Pro
     }
 
     try {
-        const res = await fetch(`${API_PREFIX}/products/${id}`);
-        if (!res.ok) {
-            throw new Error("Failed to fetch product");
-        }
-
-        return (await res.json()) as Product;
+        const { data } = await api.get<Product>(`/products/${id}`);
+        return data;
     } catch (err) {
         console.error("Error fetching product:", err);
         return null;
@@ -136,12 +116,7 @@ export async function fetchReviews(productId: number | string | undefined): Prom
     }
 
     try {
-        const res = await fetch(`${API_PREFIX}/products/${productId}/reviews`);
-        if (!res.ok) {
-            throw new Error("Failed to fetch reviews");
-        }
-
-        const data = (await res.json()) as PagedResponse<Review> | Review[];
+        const { data } = await api.get<PagedResponse<Review> | Review[]>(`/products/${productId}/reviews`);
         if (Array.isArray(data)) {
             return data;
         }
@@ -255,7 +230,7 @@ export async function addReview(productId: number, reviewData: ReviewPayload): P
 }
 
 export async function getAllUsers(): Promise<User[]> {
-    const { data } = await api.get<PagedResponse<User> | User[]>("/users", { params: { page: 0, size: 200 } });
+    const { data } = await api.get<PagedResponse<User> | User[]>("/users", { params: { page: 0, size: 100 } });
     if (Array.isArray(data)) {
         return data;
     }

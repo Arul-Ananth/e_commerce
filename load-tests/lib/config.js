@@ -1,3 +1,5 @@
+import { fail } from 'k6';
+
 export const BASE_URL = (__ENV.BASE_URL || 'http://localhost:8080').replace(/\/+$/, '');
 export const CREATE_USERS = (__ENV.CREATE_USERS || 'false').toLowerCase() === 'true';
 export const LOADTEST_WEBHOOK_SECRET = __ENV.LOADTEST_WEBHOOK_SECRET || 'loadtest-secret';
@@ -33,6 +35,12 @@ export function envBool(name, fallback = false) {
     return fallback;
   }
   return String(raw).toLowerCase() === 'true';
+}
+
+export function validateVuCapacity(envName, requestedVus, users) {
+  if (requestedVus > users.length) {
+    fail(`${envName}=${requestedVus} exceeds users.csv count=${users.length}. Add users or lower ${envName}.`);
+  }
 }
 
 export function pickWeighted(weightedItems) {

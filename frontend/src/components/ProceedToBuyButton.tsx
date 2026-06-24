@@ -4,7 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../global_component/AuthContext";
 import { redirectToLogin } from "../global_component/authUtils";
 
-export default function ProceedToBuyButton({ fullWidth = true }) {
+interface ProceedToBuyButtonProps {
+    fullWidth?: boolean;
+}
+
+export default function ProceedToBuyButton({ fullWidth = true }: ProceedToBuyButtonProps) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 

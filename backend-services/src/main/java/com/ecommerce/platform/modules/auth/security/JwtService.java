@@ -2,8 +2,7 @@ package com.ecommerce.platform.modules.auth.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import com.ecommerce.platform.modules.users.model.Role;
-import com.ecommerce.platform.modules.users.model.User;
+import com.ecommerce.platform.modules.users.api.UserIdentity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -30,24 +29,20 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(User user) {
+    public String generateToken(UserIdentity user) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
-        List<String> roles = user.getRoles().stream()
-                .map(Role::getName)
-                .toList();
-
         return Jwts.builder()
-                .setSubject(String.valueOf(user.getId()))
-                .claim("email", user.getEmail())
-                .claim("displayName", user.getDisplayName())
-                .claim("roles", roles)
-                .claim("userDiscountPercentage", user.getUserDiscountPercentage())
-                .claim("userDiscountStartDate", user.getUserDiscountStartDate())
-                .claim("userDiscountEndDate", user.getUserDiscountEndDate())
-                .claim("enabled", user.isEnabled())
-                .claim("accountNonLocked", user.isAccountNonLocked())
+                .setSubject(String.valueOf(user.id()))
+                .claim("email", user.email())
+                .claim("displayName", user.displayName())
+                .claim("roles", user.roles())
+                .claim("userDiscountPercentage", user.userDiscountPercentage())
+                .claim("userDiscountStartDate", user.userDiscountStartDate())
+                .claim("userDiscountEndDate", user.userDiscountEndDate())
+                .claim("enabled", user.enabled())
+                .claim("accountNonLocked", user.accountNonLocked())
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(key, SignatureAlgorithm.HS256)

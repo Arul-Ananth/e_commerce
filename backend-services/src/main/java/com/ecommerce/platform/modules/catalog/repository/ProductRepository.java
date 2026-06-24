@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -26,6 +27,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = {"discounts"})
     @Query("select p from Product p where p.id = :id")
     Optional<Product> findForCartMutationById(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"discounts"})
+    @Query("select distinct p from Product p join p.discounts d where d.id in :discountIds")
+    List<Product> findProductsWithDiscountIds(@Param("discountIds") Collection<Long> discountIds);
 
     @Query("""
             select new com.ecommerce.platform.modules.catalog.repository.ProductImageRow(p.id, image)

@@ -17,8 +17,6 @@ import com.ecommerce.platform.modules.auth.security.AuthenticatedUser;
 import com.ecommerce.platform.modules.checkout.repository.CheckoutOrderRepository;
 import com.ecommerce.platform.modules.checkout.repository.PaymentTransactionRepository;
 import com.ecommerce.platform.modules.checkout.repository.WebhookEventLogRepository;
-import com.ecommerce.platform.modules.users.model.User;
-import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -44,21 +42,18 @@ public class CheckoutService {
     private final WebhookEventLogRepository webhookEventLogRepository;
     private final PaymentServiceResolver paymentServiceResolver;
     private final String defaultCurrency;
-    private final EntityManager entityManager;
 
     public CheckoutService(CartService cartService,
                            CheckoutOrderRepository checkoutOrderRepository,
                            PaymentTransactionRepository paymentTransactionRepository,
                            WebhookEventLogRepository webhookEventLogRepository,
                            PaymentServiceResolver paymentServiceResolver,
-                           EntityManager entityManager,
                            @Value("${app.payment.default-currency:usd}") String defaultCurrency) {
         this.cartService = cartService;
         this.checkoutOrderRepository = checkoutOrderRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.webhookEventLogRepository = webhookEventLogRepository;
         this.paymentServiceResolver = paymentServiceResolver;
-        this.entityManager = entityManager;
         this.defaultCurrency = defaultCurrency;
     }
 
@@ -129,7 +124,7 @@ public class CheckoutService {
         CheckoutOrder order = checkoutOrderRepository.findDetailedById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
-        boolean isOwner = order.getUser().getId().equals(requester.getId());
+        boolean isOwner = order.getUserId().equals(requester.getId());
         boolean isAdmin = requester.hasRole("ROLE_ADMIN");
         if (!isOwner && !isAdmin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to view this order");
@@ -158,14 +153,9 @@ public class CheckoutService {
         }
 
         String eventId = paymentService.getProvider().name() + ":" + event.eventId();
-        if (webhookEventLogRepository.existsByEventId(eventId)) {
-            log.info("Ignoring duplicate webhook eventId={}", eventId);
-            return;
-        }
-
         try {
+            webhookEventLogRepository.saveAndFlush(new WebhookEventLog(eventId, event.eventType()));
             applyWebhookTransition(paymentService.getProvider(), eventId, event);
-            webhookEventLogRepository.save(new WebhookEventLog(eventId, event.eventType()));
         } catch (DataIntegrityViolationException ex) {
             log.info("Ignoring duplicate webhook race eventId={}", eventId);
         }
@@ -202,7 +192,7 @@ public class CheckoutService {
             order.setStatus(OrderStatus.PAID);
             checkoutOrderRepository.save(order);
             cartService.clearByUserId(
-                    order.getUser().getId()
+                    order.getUserId()
             );
             return;
         }
@@ -248,7 +238,7 @@ public class CheckoutService {
 
     private CheckoutOrder buildOrderSnapshot(AuthenticatedUser user, CartResponse cart) {
         CheckoutOrder order = new CheckoutOrder();
-        order.setUser(entityManager.getReference(User.class, user.getId()));
+        order.setUserId(user.getId());
         order.setStatus(OrderStatus.PENDING_PAYMENT);
         order.setCurrency(resolveCurrency());
         order.setTotalAmount(BigDecimal.ZERO);

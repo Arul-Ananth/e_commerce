@@ -5,6 +5,7 @@ import com.ecommerce.platform.modules.cart.repository.CartItemRepository;
 import com.ecommerce.platform.modules.cart.repository.CartRepository;
 import com.ecommerce.platform.modules.catalog.model.Product;
 import com.ecommerce.platform.modules.catalog.repository.ProductRepository;
+import com.ecommerce.platform.modules.users.api.UserIdentity;
 import com.ecommerce.platform.modules.users.model.Role;
 import com.ecommerce.platform.modules.users.model.User;
 import com.ecommerce.platform.modules.users.repository.RoleRepository;
@@ -88,7 +89,22 @@ public abstract class IntegrationTestBase {
     }
 
     protected String tokenFor(User user) {
-        return jwtService.generateToken(user);
+        return jwtService.generateToken(toIdentity(user));
+    }
+
+    protected UserIdentity toIdentity(User user) {
+        return new UserIdentity(
+                user.getId(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getPassword(),
+                user.getRoles().stream().map(Role::getName).toList(),
+                user.isEnabled(),
+                user.isAccountNonLocked(),
+                user.getUserDiscountPercentage(),
+                user.getUserDiscountStartDate(),
+                user.getUserDiscountEndDate()
+        );
     }
 
     protected Product createProduct(String name, double price, String category) {

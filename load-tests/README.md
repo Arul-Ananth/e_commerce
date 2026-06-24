@@ -131,7 +131,7 @@ k6 run -e BASE_URL=http://localhost:8080 -e ADMIN_EMAIL=admin@ecommerce.com -e A
 mysql -h 127.0.0.1 -P 3306 -u root -p ecommerce_db < ../sql/reset-load-test-state.sql
 ```
 
-Optionally add a larger generated catalog before high-VU browse/cart/checkout runs:
+Optionally add a larger generated catalog before high-VU browse/cart/checkout runs. Browse, cart, checkout, mixed, webhook, and breakpoint scripts discover live products from the backend and fall back to `data/products.json` only when discovery returns no products:
 
 ```bash
 mysql -h 127.0.0.1 -P 3306 -u root -p ecommerce_db < ../sql/seed-load-test-products.sql
